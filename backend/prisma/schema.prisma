@@ -62,14 +62,16 @@ model Trip {
 }
 
 model DailyPlan {
-  id            String       @id @default(uuid())
-  tripId        String
-  trip          Trip         @relation(fields: [tripId], references: [id], onDelete: Cascade)
-  date          DateTime
-  estimatedCost Float        @default(0)
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
-  activities    Activity[]
+  id              String           @id @default(uuid())
+  tripId          String
+  trip            Trip             @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  date            DateTime
+  estimatedCost   Float            @default(0)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  activities      Activity[]
+  meals           Meal[]
+  transportations Transportation[]
 }
 
 model Activity {
@@ -86,6 +88,42 @@ model Activity {
   openingHours  String?
   rating        Float?
   imageUrl      String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Meal {
+  id            String    @id @default(uuid())
+  dailyPlanId   String
+  dailyPlan     DailyPlan @relation(fields: [dailyPlanId], references: [id], onDelete: Cascade)
+  name          String
+  description   String?
+  latitude      Float
+  longitude     Float
+  mealType      String
+  cost          Float
+  cuisine       String?
+  rating        Float?
+  imageUrl      String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Transportation {
+  id            String    @id @default(uuid())
+  dailyPlanId   String
+  dailyPlan     DailyPlan @relation(fields: [dailyPlanId], references: [id], onDelete: Cascade)
+  fromLocation  String
+  toLocation    String
+  fromLatitude  Float
+  fromLongitude Float
+  toLatitude    Float
+  toLongitude   Float
+  mode          String
+  duration      Int
+  cost          Float
+  departureTime DateTime?
+  arrivalTime   DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 }

@@ -23,6 +23,18 @@ export interface Trip {
   startDate: Date;
   endDate: Date;
   status: string;
+  dailyPlans?: DailyPlan[];
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+export interface DailyPlan {
+  id: string;
+  date: Date;
+  activities: Activity[];
+  meals: Meal[];
+  transportations: Transportation[];
+  estimatedCost: number;
 }
 
 export interface Activity {
@@ -38,9 +50,32 @@ export interface Activity {
   imageUrl?: string;
 }
 
+export interface Meal {
+  id: string;
+  name: string;
+  latitude: number;
+  longitude: number;
+  mealType: string;
+  cost: number;
+  cuisine?: string;
+}
+
+export interface Transportation {
+  id: string;
+  fromLocation: string;
+  toLocation: string;
+  fromLatitude: number;
+  fromLongitude: number;
+  toLatitude: number;
+  toLongitude: number;
+  mode: string;
+  duration: number;
+  cost: number;
+}
+
 export interface TravelPreferences {
-  activityType?: string;
-  foodPreference?: string;
-  transportPreference?: string;
+  activityType?: string[] | string;
+  foodPreference?: string[] | string;
+  transportPreference?: string[] | string;
   schedulePreference?: string;
 }

@@ -73,6 +73,25 @@ class AuthService {
     return token !== null;
   }
 
+  async updateProfile(data: {
+    firstName?: string;
+    lastName?: string;
+  }): Promise<any> {
+    const response = await apiClient.put("/api/auth/profile", data);
+    const updatedUser = response.data.data;
+    await AsyncStorage.setItem(this.USER_KEY, JSON.stringify(updatedUser));
+    return updatedUser;
+  }
+
+  async updatePreferences(preferences: any): Promise<any> {
+    const response = await apiClient.put("/api/auth/preferences", {
+      preferences,
+    });
+    const updatedUser = response.data.data;
+    await AsyncStorage.setItem(this.USER_KEY, JSON.stringify(updatedUser));
+    return updatedUser;
+  }
+
   private async storeAuthData(authData: AuthResponse): Promise<void> {
     await AsyncStorage.multiSet([
       [this.TOKEN_KEY, authData.accessToken],

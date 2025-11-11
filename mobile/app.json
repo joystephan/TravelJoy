@@ -7,21 +7,38 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "splash": {
-      "image": "./assets/splash.png",
+      "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#4A90E2"
     },
     "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.traveljoy.app"
+      "bundleIdentifier": "com.traveljoy.app",
+      "buildNumber": "1",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "TravelJoy needs your location to provide personalized travel recommendations and show nearby attractions.",
+        "NSLocationAlwaysUsageDescription": "TravelJoy uses your location to enhance your travel experience with real-time updates.",
+        "NSCameraUsageDescription": "TravelJoy needs camera access to let you capture and share travel moments.",
+        "NSPhotoLibraryUsageDescription": "TravelJoy needs access to your photos to let you add images to your trips."
+      },
+      "config": {
+        "usesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#4A90E2"
       },
       "package": "com.traveljoy.app",
+      "versionCode": 1,
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "INTERNET",
+        "ACCESS_NETWORK_STATE"
+      ],
       "config": {
         "googleMaps": {
           "apiKey": ""
@@ -38,6 +55,15 @@
           "locationAlwaysAndWhenInUsePermission": "Allow TravelJoy to use your location for trip planning."
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "your-project-id-here"
+      }
+    },
+    "owner": "your-expo-username",
+    "privacy": "public",
+    "description": "AI-powered travel planning made simple. Create personalized multi-day itineraries with smart recommendations for activities, dining, and transportation.",
+    "githubUrl": "https://github.com/yourusername/traveljoy"
   }
 }
