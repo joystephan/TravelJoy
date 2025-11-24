@@ -24,6 +24,7 @@ const TravelPreferencesScreen = lazy(
   () => import("../screens/TravelPreferencesScreen")
 );
 const TripHistoryScreen = lazy(() => import("../screens/TripHistoryScreen"));
+const ExploreScreen = lazy(() => import("../screens/ExploreScreen"));
 const SubscriptionGate = lazy(() => import("../components/SubscriptionGate"));
 
 // Loading fallback component
@@ -80,18 +81,30 @@ function MainTabs() {
   return (
     <Tab.Navigator
       screenOptions={{
-        tabBarActiveTintColor: "#007AFF",
+        tabBarActiveTintColor: "#50C9C3",
         tabBarInactiveTintColor: "#8E8E93",
         headerShown: false,
         lazy: true, // Enable lazy loading for tab screens
+        tabBarStyle: {
+          backgroundColor: "#FFFFFF",
+          borderTopWidth: 0,
+          elevation: 8,
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: 0.1,
+          shadowRadius: 8,
+          paddingBottom: 8,
+          paddingTop: 8,
+          height: 60,
+        },
       }}
     >
       <Tab.Screen
-        name="Home"
-        component={HomeScreen}
+        name="Explore"
+        component={withSuspense(ExploreScreen)}
         options={{
-          tabBarLabel: "Home",
-          tabBarIcon: ({ color }) => <Text style={{ fontSize: 24 }}>🏠</Text>,
+          tabBarLabel: "Explore",
+          tabBarIcon: ({ color }) => <Text style={{ fontSize: 24 }}>🌍</Text>,
         }}
       />
       <Tab.Screen
@@ -134,7 +147,6 @@ export default function AppNavigator() {
     <Stack.Navigator
       screenOptions={{
         // Optimize stack navigator performance
-        headerMode: "screen",
         cardStyle: { backgroundColor: "#fff" },
       }}
     >

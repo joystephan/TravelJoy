@@ -43,6 +43,8 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({
       setPlans(fetchedPlans);
     } catch (err: any) {
       console.error("Failed to load plans:", err);
+      // Don't throw - just log the error and continue
+      setPlans([]); // Set empty plans array
     }
   }, []);
 

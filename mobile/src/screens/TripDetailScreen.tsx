@@ -7,12 +7,18 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  SafeAreaView,
+  StatusBar,
+  Dimensions,
 } from "react-native";
-import MapView, { Marker } from "react-native-maps";
+// import MapView, { Marker } from "react-native-maps";
 import { tripService } from "../services/tripService";
 import { Trip, DailyPlan, Activity } from "../types";
 import WeatherWidget from "../components/WeatherWidget";
 import ActivityCard from "../components/ActivityCard";
+import { colors, spacing, borderRadius, shadows, typography } from "../theme";
+
+const { width } = Dimensions.get('window');
 
 interface TripDetailScreenProps {
   route: any;
@@ -85,7 +91,7 @@ export default function TripDetailScreen({
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#007AFF" />
+        <ActivityIndicator size="large" color={colors.primary} />
         <Text style={styles.loadingText}>Loading your trip...</Text>
       </View>
     );
@@ -94,6 +100,7 @@ export default function TripDetailScreen({
   if (!trip || !trip.dailyPlans || trip.dailyPlans.length === 0) {
     return (
       <View style={styles.emptyContainer}>
+        <Text style={styles.emptyEmoji}>✈️</Text>
         <Text style={styles.emptyText}>
           {trip?.status === "generating"
             ? "Your itinerary is being generated..."
@@ -110,328 +117,555 @@ export default function TripDetailScreen({
   const allActivities = trip.dailyPlans.flatMap((dp) => dp.activities);
 
   return (
-    <View style={styles.container}>
-      {/* Map View */}
-      <View style={styles.mapContainer}>
-        <MapView
-          style={styles.map}
-          initialRegion={{
-            latitude: allActivities.length > 0 ? allActivities[0].latitude : 0,
-            longitude:
-              allActivities.length > 0 ? allActivities[0].longitude : 0,
-            latitudeDelta: 0.1,
-            longitudeDelta: 0.1,
-          }}
-        >
-          {currentDayPlan.activities.map((activity) => (
-            <Marker
-              key={activity.id}
-              coordinate={{
-                latitude: activity.latitude,
-                longitude: activity.longitude,
-              }}
-              title={activity.name}
-              description={activity.description}
+    <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle="light-content" backgroundColor={colors.primary} />
+      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+        {/* Hero Section with Map */}
+        <View style={styles.hero}>
+          {/* Map Placeholder */}
+          <View style={[styles.map, styles.mapPlaceholder]}>
+            <Text style={styles.mapPlaceholderText}>🗺️</Text>
+            <Text style={styles.mapPlaceholderTitle}>Map View</Text>
+            <Text style={styles.mapPlaceholderSubtitle}>
+              {currentDayPlan.activities.length} activities
+            </Text>
+          </View>
+
+          {/* Gradient Overlay */}
+          <View style={styles.heroOverlay} />
+
+          {/* Trip Header */}
+          <View style={styles.heroContent}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}
+            >
+              <Text style={styles.backIcon}>←</Text>
+            </TouchableOpacity>
+
+            <View style={styles.heroInfo}>
+              <Text style={styles.destination}>{trip.destination}</Text>
+              <View style={styles.tripMeta}>
+                <View style={styles.metaItem}>
+                  <Text style={styles.metaIcon}>💰</Text>
+                  <Text style={styles.metaText}>${trip.budget}</Text>
+                </View>
+                <View style={styles.metaDivider} />
+                <View style={styles.metaItem}>
+                  <Text style={styles.metaIcon}>📅</Text>
+                  <Text style={styles.metaText}>
+                    {trip.dailyPlans.length} days
+                  </Text>
+                </View>
+              </View>
+            </View>
+          </View>
+
+          {/* Weather Widget */}
+          <View style={styles.weatherBadge}>
+            <WeatherWidget
+              latitude={allActivities.length > 0 ? allActivities[0].latitude : 0}
+              longitude={
+                allActivities.length > 0 ? allActivities[0].longitude : 0
+              }
+              date={currentDayPlan.date}
             />
-          ))}
-        </MapView>
-
-        {/* Weather Overlay */}
-        <View style={styles.weatherOverlay}>
-          <WeatherWidget
-            latitude={allActivities.length > 0 ? allActivities[0].latitude : 0}
-            longitude={
-              allActivities.length > 0 ? allActivities[0].longitude : 0
-            }
-            date={currentDayPlan.date}
-          />
+          </View>
         </View>
-      </View>
 
-      {/* Trip Info Header */}
-      <View style={styles.header}>
-        <Text style={styles.destination}>{trip.destination}</Text>
-        <Text style={styles.budget}>Budget: ${trip.budget}</Text>
-      </View>
-
-      {/* Day Selector */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.daySelector}
-      >
-        {trip.dailyPlans.map((dayPlan, index) => (
-          <TouchableOpacity
-            key={dayPlan.id}
-            style={[
-              styles.dayButton,
-              selectedDay === index && styles.dayButtonSelected,
-            ]}
-            onPress={() => setSelectedDay(index)}
+        {/* Day Selector */}
+        <View style={styles.daySelectorWrapper}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.daySelector}
           >
-            <Text
-              style={[
-                styles.dayButtonText,
-                selectedDay === index && styles.dayButtonTextSelected,
-              ]}
-            >
-              Day {index + 1}
-            </Text>
-            <Text
-              style={[
-                styles.dayDate,
-                selectedDay === index && styles.dayDateSelected,
-              ]}
-            >
-              {new Date(dayPlan.date).toLocaleDateString("en-US", {
-                month: "short",
-                day: "numeric",
-              })}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
-
-      {/* Daily Itinerary */}
-      <ScrollView style={styles.itinerary}>
-        <View style={styles.costBanner}>
-          <Text style={styles.costText}>
-            Estimated Cost: ${currentDayPlan.estimatedCost.toFixed(2)}
-          </Text>
+            {trip.dailyPlans.map((dayPlan, index) => (
+              <TouchableOpacity
+                key={dayPlan.id}
+                style={[
+                  styles.dayButton,
+                  selectedDay === index && styles.dayButtonSelected,
+                ]}
+                onPress={() => setSelectedDay(index)}
+                activeOpacity={0.7}
+              >
+                <Text
+                  style={[
+                    styles.dayNumber,
+                    selectedDay === index && styles.dayNumberSelected,
+                  ]}
+                >
+                  Day {index + 1}
+                </Text>
+                <Text
+                  style={[
+                    styles.dayDate,
+                    selectedDay === index && styles.dayDateSelected,
+                  ]}
+                >
+                  {new Date(dayPlan.date).toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                  })}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
         </View>
 
-        {/* Activities */}
+        {/* Daily Budget Banner */}
+        <View style={styles.budgetBanner}>
+          <View style={styles.budgetContent}>
+            <Text style={styles.budgetLabel}>Daily Budget</Text>
+            <Text style={styles.budgetAmount}>
+              ${currentDayPlan.estimatedCost.toFixed(2)}
+            </Text>
+          </View>
+          <View style={styles.budgetProgress}>
+            <View
+              style={[
+                styles.budgetProgressFill,
+                {
+                  width: `${Math.min(
+                    (currentDayPlan.estimatedCost / (trip.budget / trip.dailyPlans.length)) * 100,
+                    100
+                  )}%`,
+                },
+              ]}
+            />
+          </View>
+        </View>
+
+        {/* Activities Section */}
         {currentDayPlan.activities.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Activities</Text>
-            {currentDayPlan.activities.map((activity) => (
-              <ActivityCard
-                key={activity.id}
-                activity={activity}
-                onEdit={() => handleEditActivity(activity)}
-                onDelete={() => handleDeleteActivity(activity.id)}
-              />
+            <Text style={styles.sectionTitle}>🎯 Activities</Text>
+            {currentDayPlan.activities.map((activity, index) => (
+              <View key={activity.id}>
+                <ActivityCard
+                  activity={activity}
+                  onEdit={() => handleEditActivity(activity)}
+                  onDelete={() => handleDeleteActivity(activity.id)}
+                />
+                {index < currentDayPlan.activities.length - 1 && (
+                  <View style={styles.timelineDivider}>
+                    <View style={styles.timelineDot} />
+                    <View style={styles.timelineLine} />
+                  </View>
+                )}
+              </View>
             ))}
           </View>
         )}
 
-        {/* Meals */}
+        {/* Meals Section */}
         {currentDayPlan.meals.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Meals</Text>
+            <Text style={styles.sectionTitle}>🍽️ Meals</Text>
             {currentDayPlan.meals.map((meal) => (
               <View key={meal.id} style={styles.mealCard}>
-                <Text style={styles.mealName}>{meal.name}</Text>
-                <Text style={styles.mealType}>{meal.mealType}</Text>
+                <View style={styles.mealHeader}>
+                  <View style={styles.mealInfo}>
+                    <Text style={styles.mealName}>{meal.name}</Text>
+                    <Text style={styles.mealType}>{meal.mealType}</Text>
+                  </View>
+                  <View style={styles.mealPrice}>
+                    <Text style={styles.mealPriceText}>
+                      ${meal.cost.toFixed(2)}
+                    </Text>
+                  </View>
+                </View>
                 {meal.cuisine && (
-                  <Text style={styles.mealCuisine}>{meal.cuisine}</Text>
+                  <View style={styles.mealBadge}>
+                    <Text style={styles.mealBadgeText}>{meal.cuisine}</Text>
+                  </View>
                 )}
-                <Text style={styles.mealCost}>${meal.cost.toFixed(2)}</Text>
               </View>
             ))}
           </View>
         )}
 
-        {/* Transportation */}
+        {/* Transportation Section */}
         {currentDayPlan.transportations.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Transportation</Text>
+            <Text style={styles.sectionTitle}>🚗 Transportation</Text>
             {currentDayPlan.transportations.map((transport) => (
               <View key={transport.id} style={styles.transportCard}>
-                <Text style={styles.transportMode}>{transport.mode}</Text>
-                <Text style={styles.transportRoute}>
-                  {transport.fromLocation} → {transport.toLocation}
-                </Text>
+                <View style={styles.transportHeader}>
+                  <View style={styles.transportMode}>
+                    <Text style={styles.transportModeIcon}>
+                      {transport.mode === "walking"
+                        ? "🚶"
+                        : transport.mode === "public"
+                        ? "🚇"
+                        : transport.mode === "taxi"
+                        ? "🚕"
+                        : "🚗"}
+                    </Text>
+                    <Text style={styles.transportModeText}>{transport.mode}</Text>
+                  </View>
+                  <Text style={styles.transportCost}>
+                    ${transport.cost.toFixed(2)}
+                  </Text>
+                </View>
+                <View style={styles.transportRoute}>
+                  <Text style={styles.transportLocation}>
+                    {transport.fromLocation}
+                  </Text>
+                  <Text style={styles.transportArrow}>→</Text>
+                  <Text style={styles.transportLocation}>
+                    {transport.toLocation}
+                  </Text>
+                </View>
                 <Text style={styles.transportDuration}>
-                  {transport.duration} min
-                </Text>
-                <Text style={styles.transportCost}>
-                  ${transport.cost.toFixed(2)}
+                  {transport.duration} minutes
                 </Text>
               </View>
             ))}
           </View>
         )}
+
+        <View style={styles.bottomSpacing} />
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
   container: {
     flex: 1,
-    backgroundColor: "#f5f5f5",
   },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#f5f5f5",
+    backgroundColor: colors.background,
   },
   loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: "#666",
+    ...typography.body1,
+    color: colors.textSecondary,
+    marginTop: spacing.md,
   },
   emptyContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    padding: 24,
+    padding: spacing.xl,
+    backgroundColor: colors.background,
+  },
+  emptyEmoji: {
+    fontSize: 64,
+    marginBottom: spacing.md,
   },
   emptyText: {
-    fontSize: 18,
-    color: "#666",
+    ...typography.h3,
+    color: colors.textSecondary,
     textAlign: "center",
-    marginBottom: 24,
+    marginBottom: spacing.lg,
   },
   refreshButton: {
-    backgroundColor: "#007AFF",
-    borderRadius: 8,
-    padding: 12,
-    paddingHorizontal: 24,
+    backgroundColor: colors.primary,
+    borderRadius: borderRadius.lg,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
+    ...shadows.md,
   },
   refreshButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
+    ...typography.button,
+    color: colors.white,
   },
-  mapContainer: {
-    height: 250,
-    position: "relative",
+  hero: {
+    height: 300,
+    position: 'relative',
   },
   map: {
-    flex: 1,
+    ...StyleSheet.absoluteFillObject,
   },
-  weatherOverlay: {
-    position: "absolute",
-    top: 16,
-    right: 16,
+  mapPlaceholder: {
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  header: {
-    backgroundColor: "#fff",
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#e0e0e0",
+  mapPlaceholderText: {
+    fontSize: 64,
+    marginBottom: spacing.sm,
+  },
+  mapPlaceholderTitle: {
+    ...typography.h2,
+    color: colors.white,
+    marginBottom: spacing.xs,
+  },
+  mapPlaceholderSubtitle: {
+    ...typography.body2,
+    color: colors.white,
+    opacity: 0.9,
+  },
+  heroOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+  },
+  heroContent: {
+    ...StyleSheet.absoluteFillObject,
+    padding: spacing.md,
+    justifyContent: 'space-between',
+  },
+  backButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.white,
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...shadows.md,
+  },
+  backIcon: {
+    fontSize: 24,
+    color: colors.textPrimary,
+  },
+  heroInfo: {
+    marginBottom: spacing.md,
   },
   destination: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#333",
+    ...typography.display1,
+    color: colors.white,
+    marginBottom: spacing.sm,
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
   },
-  budget: {
+  tripMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  metaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  metaIcon: {
     fontSize: 16,
-    color: "#666",
-    marginTop: 4,
+    marginRight: spacing.xs,
+  },
+  metaText: {
+    ...typography.body1,
+    color: colors.white,
+    fontWeight: '600',
+  },
+  metaDivider: {
+    width: 1,
+    height: 16,
+    backgroundColor: colors.white,
+    opacity: 0.5,
+    marginHorizontal: spacing.md,
+  },
+  weatherBadge: {
+    position: 'absolute',
+    top: spacing.md,
+    right: spacing.md,
+  },
+  daySelectorWrapper: {
+    backgroundColor: colors.white,
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.gray200,
   },
   daySelector: {
-    backgroundColor: "#fff",
-    borderBottomWidth: 1,
-    borderBottomColor: "#e0e0e0",
+    paddingHorizontal: spacing.md,
+    gap: spacing.sm,
   },
   dayButton: {
-    padding: 12,
-    paddingHorizontal: 20,
-    borderBottomWidth: 2,
-    borderBottomColor: "transparent",
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.lg,
+    backgroundColor: colors.gray100,
+    alignItems: 'center',
+    minWidth: 80,
   },
   dayButtonSelected: {
-    borderBottomColor: "#007AFF",
+    backgroundColor: colors.primary,
+    ...shadows.sm,
   },
-  dayButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#666",
+  dayNumber: {
+    ...typography.body2,
+    color: colors.textPrimary,
+    fontWeight: '600',
   },
-  dayButtonTextSelected: {
-    color: "#007AFF",
+  dayNumberSelected: {
+    color: colors.white,
   },
   dayDate: {
-    fontSize: 12,
-    color: "#999",
+    ...typography.caption,
+    color: colors.textSecondary,
     marginTop: 2,
   },
   dayDateSelected: {
-    color: "#007AFF",
+    color: colors.white,
+    opacity: 0.9,
   },
-  itinerary: {
-    flex: 1,
+  budgetBanner: {
+    backgroundColor: colors.white,
+    margin: spacing.md,
+    padding: spacing.lg,
+    borderRadius: borderRadius.lg,
+    ...shadows.sm,
   },
-  costBanner: {
-    backgroundColor: "#34C759",
-    padding: 12,
-    alignItems: "center",
+  budgetContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
   },
-  costText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
+  budgetLabel: {
+    ...typography.body2,
+    color: colors.textSecondary,
+  },
+  budgetAmount: {
+    ...typography.h2,
+    color: colors.primary,
+    fontWeight: '700',
+  },
+  budgetProgress: {
+    height: 6,
+    backgroundColor: colors.gray200,
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  budgetProgressFill: {
+    height: '100%',
+    backgroundColor: colors.primary,
   },
   section: {
-    backgroundColor: "#fff",
-    marginTop: 12,
-    padding: 16,
+    paddingHorizontal: spacing.md,
+    marginBottom: spacing.lg,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#333",
-    marginBottom: 12,
+    ...typography.h3,
+    color: colors.textPrimary,
+    marginBottom: spacing.md,
+  },
+  timelineDivider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingLeft: spacing.lg,
+    marginVertical: spacing.xs,
+  },
+  timelineDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.primary,
+  },
+  timelineLine: {
+    flex: 1,
+    height: 2,
+    backgroundColor: colors.gray200,
+    marginLeft: spacing.xs,
   },
   mealCard: {
-    backgroundColor: "#f9f9f9",
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 8,
+    backgroundColor: colors.white,
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
+    ...shadows.sm,
+  },
+  mealHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  mealInfo: {
+    flex: 1,
   },
   mealName: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#333",
+    ...typography.h4,
+    color: colors.textPrimary,
+    marginBottom: spacing.xs,
   },
   mealType: {
-    fontSize: 14,
-    color: "#666",
-    marginTop: 4,
-    textTransform: "capitalize",
+    ...typography.caption,
+    color: colors.textSecondary,
+    textTransform: 'capitalize',
   },
-  mealCuisine: {
-    fontSize: 14,
-    color: "#999",
-    marginTop: 2,
+  mealPrice: {
+    backgroundColor: colors.gray100,
+    borderRadius: borderRadius.md,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
   },
-  mealCost: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#34C759",
-    marginTop: 4,
+  mealPriceText: {
+    ...typography.body2,
+    color: colors.primary,
+    fontWeight: '700',
+  },
+  mealBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: colors.primary,
+    borderRadius: borderRadius.md,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    marginTop: spacing.sm,
+  },
+  mealBadgeText: {
+    ...typography.caption,
+    color: colors.white,
+    fontWeight: '600',
   },
   transportCard: {
-    backgroundColor: "#f9f9f9",
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 8,
+    backgroundColor: colors.white,
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
+    ...shadows.sm,
+  },
+  transportHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
   },
   transportMode: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#333",
-    textTransform: "capitalize",
+    flexDirection: 'row',
+    alignItems: 'center',
   },
-  transportRoute: {
-    fontSize: 14,
-    color: "#666",
-    marginTop: 4,
+  transportModeIcon: {
+    fontSize: 24,
+    marginRight: spacing.xs,
   },
-  transportDuration: {
-    fontSize: 14,
-    color: "#999",
-    marginTop: 2,
+  transportModeText: {
+    ...typography.body1,
+    color: colors.textPrimary,
+    fontWeight: '600',
+    textTransform: 'capitalize',
   },
   transportCost: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#34C759",
-    marginTop: 4,
+    ...typography.body1,
+    color: colors.primary,
+    fontWeight: '700',
+  },
+  transportRoute: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.xs,
+  },
+  transportLocation: {
+    ...typography.body2,
+    color: colors.textSecondary,
+    flex: 1,
+  },
+  transportArrow: {
+    ...typography.body1,
+    color: colors.textLight,
+    marginHorizontal: spacing.sm,
+  },
+  transportDuration: {
+    ...typography.caption,
+    color: colors.textLight,
+  },
+  bottomSpacing: {
+    height: spacing.xl,
   },
 });

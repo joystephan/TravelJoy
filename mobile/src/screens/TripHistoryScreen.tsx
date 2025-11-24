@@ -92,7 +92,7 @@ export default function TripHistoryScreen({ navigation }: any) {
   );
 
   if (loading) {
-    return <LoadingSpinner fullScreen message="Loading trips..." />;
+    return <LoadingSpinner fullScreen={true} message="Loading trips..." />;
   }
 
   return (

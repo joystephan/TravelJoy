@@ -2,9 +2,12 @@ import Stripe from "stripe";
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
-  apiVersion: "2025-10-29.clover",
-});
+
+// Initialize Stripe only if API key is provided
+const stripeKey = process.env.STRIPE_SECRET_KEY;
+const stripe = stripeKey && stripeKey !== "" 
+  ? new Stripe(stripeKey, { apiVersion: "2025-10-29.clover" })
+  : null;
 
 export interface SubscriptionPlan {
   id: string;
@@ -87,6 +90,27 @@ class SubscriptionService {
     input: CreateSubscriptionInput
   ): Promise<SubscriptionResult> {
     const { userId, planId, paymentMethodId } = input;
+
+    // Check if Stripe is configured - if not, create a free subscription
+    if (!stripe || !process.env.STRIPE_SECRET_KEY) {
+      console.warn("Stripe not configured - creating free subscription");
+      
+      // Create a free local subscription without Stripe
+      const freeSubscription = await prisma.subscription.create({
+        data: {
+          userId,
+          planId: "free",
+          status: "active",
+          currentPeriodStart: new Date(),
+          currentPeriodEnd: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year
+          stripeSubscriptionId: `free_${userId}`,
+        },
+      });
+
+      return {
+        subscription: freeSubscription,
+      };
+    }
 
     // Get user
     const user = await prisma.user.findUnique({
@@ -210,8 +234,8 @@ class SubscriptionService {
     }
 
     // Cancel at period end in Stripe
-    if (subscription.stripeSubscriptionId.startsWith("trial_")) {
-      // For trial subscriptions, just mark as canceled
+    if (subscription.stripeSubscriptionId.startsWith("trial_") || subscription.stripeSubscriptionId.startsWith("free_")) {
+      // For trial/free subscriptions, just mark as canceled
       await prisma.subscription.update({
         where: { id: subscriptionId },
         data: {
@@ -219,7 +243,7 @@ class SubscriptionService {
           cancelAtPeriodEnd: true,
         },
       });
-    } else {
+    } else if (stripe) {
       await stripe.subscriptions.update(subscription.stripeSubscriptionId, {
         cancel_at_period_end: true,
       });

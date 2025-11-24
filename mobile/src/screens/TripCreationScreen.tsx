@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -8,20 +8,26 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
+  SafeAreaView,
+  StatusBar,
 } from "react-native";
-import { useAuth } from "../contexts/AuthContext";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { tripService } from "../services/tripService";
 import { TravelPreferences } from "../types";
+import { colors, spacing, borderRadius, shadows, typography } from "../theme";
+import CategoryChip from "../components/CategoryChip";
 
 interface TripCreationScreenProps {
   navigation: any;
+  route?: any;
 }
 
 export default function TripCreationScreen({
   navigation,
+  route,
 }: TripCreationScreenProps) {
-  const { user } = useAuth();
-  const [destination, setDestination] = useState("");
+  const [userId, setUserId] = useState("");
+  const [destination, setDestination] = useState(route?.params?.destination || "");
   const [budget, setBudget] = useState(1000);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -35,16 +41,44 @@ export default function TripCreationScreen({
     "relaxed" | "moderate" | "packed"
   >("moderate");
 
+  useEffect(() => {
+    loadUser();
+  }, []);
+
+  const loadUser = async () => {
+    try {
+      const userJson = await AsyncStorage.getItem('user');
+      if (userJson) {
+        const user = JSON.parse(userJson);
+        setUserId(user.id);
+      }
+    } catch (error) {
+      console.error('Error loading user:', error);
+    }
+  };
+
   const activityOptions = [
-    "sightseeing",
-    "adventure",
-    "cultural",
-    "relaxation",
-    "shopping",
-    "nightlife",
+    { id: "sightseeing", label: "Sightseeing", icon: "🏛️" },
+    { id: "adventure", label: "Adventure", icon: "🏔️" },
+    { id: "cultural", label: "Cultural", icon: "🎭" },
+    { id: "relaxation", label: "Relaxation", icon: "🧘" },
+    { id: "shopping", label: "Shopping", icon: "🛍️" },
+    { id: "nightlife", label: "Nightlife", icon: "🎉" },
   ];
-  const foodOptions = ["local", "international", "vegetarian", "vegan"];
-  const transportOptions = ["walking", "public", "taxi", "rental"];
+  
+  const foodOptions = [
+    { id: "local", label: "Local", icon: "🍜" },
+    { id: "international", label: "International", icon: "🍕" },
+    { id: "vegetarian", label: "Vegetarian", icon: "🥗" },
+    { id: "vegan", label: "Vegan", icon: "🌱" },
+  ];
+  
+  const transportOptions = [
+    { id: "walking", label: "Walking", icon: "🚶" },
+    { id: "public", label: "Public", icon: "🚇" },
+    { id: "taxi", label: "Taxi", icon: "🚕" },
+    { id: "rental", label: "Rental", icon: "🚗" },
+  ];
 
   const toggleSelection = (
     item: string,
@@ -89,7 +123,7 @@ export default function TripCreationScreen({
   const handleCreateTrip = async () => {
     if (!validateForm()) return;
 
-    if (!user) {
+    if (!userId) {
       Alert.alert("Error", "You must be logged in to create a trip");
       return;
     }
@@ -104,7 +138,7 @@ export default function TripCreationScreen({
       };
 
       const trip = await tripService.createTrip({
-        userId: user.id,
+        userId,
         destination,
         budget,
         startDate: new Date(startDate),
@@ -113,11 +147,11 @@ export default function TripCreationScreen({
       });
 
       Alert.alert(
-        "Success",
+        "Success! ✨",
         "Your trip is being generated! You'll be notified when it's ready.",
         [
           {
-            text: "OK",
+            text: "View Trip",
             onPress: () =>
               navigation.navigate("TripDetail", { tripId: trip.id }),
           },
@@ -134,326 +168,413 @@ export default function TripCreationScreen({
   };
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.content}>
-        <Text style={styles.title}>Plan Your Trip</Text>
-
-        {/* Destination Input */}
-        <View style={styles.section}>
-          <Text style={styles.label}>Destination</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="e.g., Paris, France"
-            value={destination}
-            onChangeText={setDestination}
-            autoCapitalize="words"
-          />
-        </View>
-
-        {/* Budget Slider */}
-        <View style={styles.section}>
-          <Text style={styles.label}>Budget: ${budget}</Text>
-          <View style={styles.budgetControls}>
-            <TouchableOpacity
-              style={styles.budgetButton}
-              onPress={() => setBudget(Math.max(100, budget - 100))}
-            >
-              <Text style={styles.budgetButtonText}>-</Text>
-            </TouchableOpacity>
-            <Text style={styles.budgetValue}>${budget}</Text>
-            <TouchableOpacity
-              style={styles.budgetButton}
-              onPress={() => setBudget(budget + 100)}
-            >
-              <Text style={styles.budgetButtonText}>+</Text>
-            </TouchableOpacity>
+    <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle="dark-content" backgroundColor={colors.white} />
+      <ScrollView 
+        style={styles.container}
+        showsVerticalScrollIndicator={false}
+        bounces={true}
+      >
+        <View style={styles.content}>
+          {/* Header */}
+          <View style={styles.headerSection}>
+            <Text style={styles.emoji}>✈️</Text>
+            <Text style={styles.title}>Plan Your Trip</Text>
+            <Text style={styles.subtitle}>
+              Tell us about your dream destination
+            </Text>
           </View>
-        </View>
 
-        {/* Date Pickers */}
-        <View style={styles.section}>
-          <Text style={styles.label}>Start Date</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="YYYY-MM-DD"
-            value={startDate}
-            onChangeText={setStartDate}
-          />
-        </View>
+          {/* Destination Input */}
+          <View style={styles.card}>
+            <Text style={styles.cardLabel}>📍 Where to?</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="e.g., Paris, France"
+              placeholderTextColor={colors.textLight}
+              value={destination}
+              onChangeText={setDestination}
+              autoCapitalize="words"
+            />
+          </View>
 
-        <View style={styles.section}>
-          <Text style={styles.label}>End Date</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="YYYY-MM-DD"
-            value={endDate}
-            onChangeText={setEndDate}
-          />
-        </View>
-
-        {/* Activity Type Preferences */}
-        <View style={styles.section}>
-          <Text style={styles.label}>Activity Preferences</Text>
-          <View style={styles.optionsGrid}>
-            {activityOptions.map((option) => (
+          {/* Budget Slider */}
+          <View style={styles.card}>
+            <Text style={styles.cardLabel}>💰 Budget</Text>
+            <View style={styles.budgetDisplay}>
+              <Text style={styles.budgetAmount}>${budget}</Text>
+              <Text style={styles.budgetLabel}>per trip</Text>
+            </View>
+            <View style={styles.budgetControls}>
               <TouchableOpacity
-                key={option}
-                style={[
-                  styles.optionButton,
-                  activityType.includes(option) && styles.optionButtonSelected,
-                ]}
-                onPress={() =>
-                  toggleSelection(option, activityType, setActivityType)
-                }
+                style={styles.budgetButton}
+                onPress={() => setBudget(Math.max(100, budget - 100))}
+                activeOpacity={0.7}
               >
-                <Text
-                  style={[
-                    styles.optionText,
-                    activityType.includes(option) && styles.optionTextSelected,
-                  ]}
-                >
-                  {option}
-                </Text>
+                <Text style={styles.budgetButtonText}>−</Text>
               </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        {/* Food Preferences */}
-        <View style={styles.section}>
-          <Text style={styles.label}>Food Preferences</Text>
-          <View style={styles.optionsGrid}>
-            {foodOptions.map((option) => (
+              <View style={styles.budgetSlider}>
+                <View
+                  style={[
+                    styles.budgetSliderFill,
+                    { width: `${Math.min((budget / 5000) * 100, 100)}%` },
+                  ]}
+                />
+              </View>
               <TouchableOpacity
-                key={option}
-                style={[
-                  styles.optionButton,
-                  foodPreference.includes(option) &&
-                    styles.optionButtonSelected,
-                ]}
-                onPress={() =>
-                  toggleSelection(option, foodPreference, setFoodPreference)
-                }
+                style={styles.budgetButton}
+                onPress={() => setBudget(Math.min(5000, budget + 100))}
+                activeOpacity={0.7}
               >
-                <Text
-                  style={[
-                    styles.optionText,
-                    foodPreference.includes(option) &&
-                      styles.optionTextSelected,
-                  ]}
-                >
-                  {option}
-                </Text>
+                <Text style={styles.budgetButtonText}>+</Text>
               </TouchableOpacity>
-            ))}
+            </View>
           </View>
-        </View>
 
-        {/* Transport Preferences */}
-        <View style={styles.section}>
-          <Text style={styles.label}>Transport Preferences</Text>
-          <View style={styles.optionsGrid}>
-            {transportOptions.map((option) => (
-              <TouchableOpacity
-                key={option}
-                style={[
-                  styles.optionButton,
-                  transportPreference.includes(option) &&
-                    styles.optionButtonSelected,
-                ]}
-                onPress={() =>
-                  toggleSelection(
-                    option,
-                    transportPreference,
-                    setTransportPreference
-                  )
-                }
-              >
-                <Text
+          {/* Date Pickers */}
+          <View style={styles.card}>
+            <Text style={styles.cardLabel}>📅 Travel Dates</Text>
+            <View style={styles.dateRow}>
+              <View style={styles.dateInput}>
+                <Text style={styles.dateLabel}>Start Date</Text>
+                <TextInput
+                  style={styles.dateField}
+                  placeholder="YYYY-MM-DD"
+                  placeholderTextColor={colors.textLight}
+                  value={startDate}
+                  onChangeText={setStartDate}
+                />
+              </View>
+              <Text style={styles.dateSeparator}>→</Text>
+              <View style={styles.dateInput}>
+                <Text style={styles.dateLabel}>End Date</Text>
+                <TextInput
+                  style={styles.dateField}
+                  placeholder="YYYY-MM-DD"
+                  placeholderTextColor={colors.textLight}
+                  value={endDate}
+                  onChangeText={setEndDate}
+                />
+              </View>
+            </View>
+          </View>
+
+          {/* Activity Preferences */}
+          <View style={styles.card}>
+            <Text style={styles.cardLabel}>🎯 Activity Preferences</Text>
+            <Text style={styles.cardHint}>Choose what interests you</Text>
+            <View style={styles.chipGrid}>
+              {activityOptions.map((option) => (
+                <CategoryChip
+                  key={option.id}
+                  label={option.label}
+                  icon={option.icon}
+                  selected={activityType.includes(option.id)}
+                  onPress={() =>
+                    toggleSelection(option.id, activityType, setActivityType)
+                  }
+                />
+              ))}
+            </View>
+          </View>
+
+          {/* Food Preferences */}
+          <View style={styles.card}>
+            <Text style={styles.cardLabel}>🍽️ Food Preferences</Text>
+            <Text style={styles.cardHint}>What would you like to eat?</Text>
+            <View style={styles.chipGrid}>
+              {foodOptions.map((option) => (
+                <CategoryChip
+                  key={option.id}
+                  label={option.label}
+                  icon={option.icon}
+                  selected={foodPreference.includes(option.id)}
+                  onPress={() =>
+                    toggleSelection(option.id, foodPreference, setFoodPreference)
+                  }
+                />
+              ))}
+            </View>
+          </View>
+
+          {/* Transport Preferences */}
+          <View style={styles.card}>
+            <Text style={styles.cardLabel}>🚗 Transportation</Text>
+            <Text style={styles.cardHint}>How do you prefer to get around?</Text>
+            <View style={styles.chipGrid}>
+              {transportOptions.map((option) => (
+                <CategoryChip
+                  key={option.id}
+                  label={option.label}
+                  icon={option.icon}
+                  selected={transportPreference.includes(option.id)}
+                  onPress={() =>
+                    toggleSelection(
+                      option.id,
+                      transportPreference,
+                      setTransportPreference
+                    )
+                  }
+                />
+              ))}
+            </View>
+          </View>
+
+          {/* Schedule Preference */}
+          <View style={styles.card}>
+            <Text style={styles.cardLabel}>⏰ Schedule Pace</Text>
+            <Text style={styles.cardHint}>How packed should your days be?</Text>
+            <View style={styles.scheduleButtons}>
+              {[
+                { id: "relaxed", label: "Relaxed", emoji: "🌸", desc: "Slow & easy" },
+                { id: "moderate", label: "Moderate", emoji: "⚖️", desc: "Balanced" },
+                { id: "packed", label: "Packed", emoji: "⚡", desc: "Action-packed" },
+              ].map((option) => (
+                <TouchableOpacity
+                  key={option.id}
                   style={[
-                    styles.optionText,
-                    transportPreference.includes(option) &&
-                      styles.optionTextSelected,
+                    styles.scheduleButton,
+                    schedulePreference === option.id && styles.scheduleButtonSelected,
                   ]}
+                  onPress={() => setSchedulePreference(option.id as any)}
+                  activeOpacity={0.7}
                 >
-                  {option}
-                </Text>
-              </TouchableOpacity>
-            ))}
+                  <Text style={styles.scheduleEmoji}>{option.emoji}</Text>
+                  <Text
+                    style={[
+                      styles.scheduleLabel,
+                      schedulePreference === option.id && styles.scheduleLabelSelected,
+                    ]}
+                  >
+                    {option.label}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.scheduleDesc,
+                      schedulePreference === option.id && styles.scheduleDescSelected,
+                    ]}
+                  >
+                    {option.desc}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
-        </View>
 
-        {/* Schedule Preference */}
-        <View style={styles.section}>
-          <Text style={styles.label}>Schedule Pace</Text>
-          <View style={styles.scheduleButtons}>
-            {(["relaxed", "moderate", "packed"] as const).map((option) => (
-              <TouchableOpacity
-                key={option}
-                style={[
-                  styles.scheduleButton,
-                  schedulePreference === option &&
-                    styles.scheduleButtonSelected,
-                ]}
-                onPress={() => setSchedulePreference(option)}
-              >
-                <Text
-                  style={[
-                    styles.scheduleText,
-                    schedulePreference === option &&
-                      styles.scheduleTextSelected,
-                  ]}
-                >
-                  {option}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
+          {/* Submit Button */}
+          <TouchableOpacity
+            style={[styles.submitButton, loading && styles.submitButtonDisabled]}
+            onPress={handleCreateTrip}
+            disabled={loading}
+            activeOpacity={0.8}
+          >
+            {loading ? (
+              <ActivityIndicator color={colors.white} size="small" />
+            ) : (
+              <>
+                <Text style={styles.submitButtonText}>Create My Trip</Text>
+                <Text style={styles.submitButtonIcon}>✨</Text>
+              </>
+            )}
+          </TouchableOpacity>
 
-        {/* Submit Button */}
-        <TouchableOpacity
-          style={[styles.submitButton, loading && styles.submitButtonDisabled]}
-          onPress={handleCreateTrip}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.submitButtonText}>Create Trip</Text>
-          )}
-        </TouchableOpacity>
-      </View>
-    </ScrollView>
+          <View style={styles.bottomSpacing} />
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
   container: {
     flex: 1,
-    backgroundColor: "#f5f5f5",
   },
   content: {
-    padding: 20,
+    padding: spacing.md,
+  },
+  headerSection: {
+    alignItems: 'center',
+    paddingVertical: spacing.lg,
+  },
+  emoji: {
+    fontSize: 48,
+    marginBottom: spacing.sm,
   },
   title: {
-    fontSize: 28,
-    fontWeight: "bold",
-    color: "#333",
-    marginBottom: 24,
+    ...typography.display2,
+    color: colors.textPrimary,
+    marginBottom: spacing.xs,
   },
-  section: {
-    marginBottom: 24,
+  subtitle: {
+    ...typography.body1,
+    color: colors.textSecondary,
+    textAlign: 'center',
   },
-  label: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#333",
-    marginBottom: 8,
+  card: {
+    backgroundColor: colors.white,
+    borderRadius: borderRadius.lg,
+    padding: spacing.lg,
+    marginBottom: spacing.md,
+    ...shadows.sm,
+  },
+  cardLabel: {
+    ...typography.h4,
+    color: colors.textPrimary,
+    marginBottom: spacing.xs,
+  },
+  cardHint: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    marginBottom: spacing.md,
   },
   input: {
-    backgroundColor: "#fff",
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
+    ...typography.body1,
+    color: colors.textPrimary,
+    backgroundColor: colors.gray50,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
     borderWidth: 1,
-    borderColor: "#ddd",
+    borderColor: colors.gray200,
+  },
+  budgetDisplay: {
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  budgetAmount: {
+    ...typography.display1,
+    color: colors.primary,
+    fontWeight: '700',
+  },
+  budgetLabel: {
+    ...typography.caption,
+    color: colors.textSecondary,
   },
   budgetControls: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#fff",
-    borderRadius: 8,
-    padding: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
   },
   budgetButton: {
-    backgroundColor: "#007AFF",
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: "center",
-    justifyContent: "center",
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...shadows.sm,
   },
   budgetButtonText: {
-    color: "#fff",
-    fontSize: 24,
-    fontWeight: "bold",
+    ...typography.h2,
+    color: colors.white,
+    fontWeight: '600',
   },
-  budgetValue: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#333",
-    marginHorizontal: 32,
-    minWidth: 100,
-    textAlign: "center",
+  budgetSlider: {
+    flex: 1,
+    height: 8,
+    backgroundColor: colors.gray200,
+    borderRadius: 4,
+    overflow: 'hidden',
   },
-  optionsGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
+  budgetSliderFill: {
+    height: '100%',
+    backgroundColor: colors.primary,
   },
-  optionButton: {
-    backgroundColor: "#fff",
-    borderRadius: 20,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
+  dateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  dateInput: {
+    flex: 1,
+  },
+  dateLabel: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    marginBottom: spacing.xs,
+  },
+  dateField: {
+    ...typography.body2,
+    color: colors.textPrimary,
+    backgroundColor: colors.gray50,
+    borderRadius: borderRadius.md,
+    padding: spacing.sm,
     borderWidth: 1,
-    borderColor: "#ddd",
+    borderColor: colors.gray200,
   },
-  optionButtonSelected: {
-    backgroundColor: "#007AFF",
-    borderColor: "#007AFF",
+  dateSeparator: {
+    ...typography.h3,
+    color: colors.textLight,
+    marginTop: 20,
   },
-  optionText: {
-    fontSize: 14,
-    color: "#666",
-    textTransform: "capitalize",
-  },
-  optionTextSelected: {
-    color: "#fff",
-    fontWeight: "600",
+  chipGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
   },
   scheduleButtons: {
-    flexDirection: "row",
-    gap: 8,
+    flexDirection: 'row',
+    gap: spacing.sm,
   },
   scheduleButton: {
     flex: 1,
-    backgroundColor: "#fff",
-    borderRadius: 8,
-    padding: 12,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#ddd",
+    backgroundColor: colors.gray50,
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: colors.gray200,
   },
   scheduleButtonSelected: {
-    backgroundColor: "#007AFF",
-    borderColor: "#007AFF",
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
-  scheduleText: {
-    fontSize: 14,
-    color: "#666",
-    textTransform: "capitalize",
+  scheduleEmoji: {
+    fontSize: 24,
+    marginBottom: spacing.xs,
   },
-  scheduleTextSelected: {
-    color: "#fff",
-    fontWeight: "600",
+  scheduleLabel: {
+    ...typography.body2,
+    color: colors.textPrimary,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  scheduleLabelSelected: {
+    color: colors.white,
+  },
+  scheduleDesc: {
+    ...typography.caption,
+    color: colors.textSecondary,
+  },
+  scheduleDescSelected: {
+    color: colors.white,
+    opacity: 0.9,
   },
   submitButton: {
-    backgroundColor: "#007AFF",
-    borderRadius: 8,
-    padding: 16,
-    alignItems: "center",
-    marginTop: 8,
-    marginBottom: 32,
+    backgroundColor: colors.primary,
+    borderRadius: borderRadius.lg,
+    padding: spacing.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: spacing.md,
+    ...shadows.lg,
   },
   submitButtonDisabled: {
-    backgroundColor: "#999",
+    backgroundColor: colors.gray400,
   },
   submitButtonText: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "600",
+    ...typography.button,
+    color: colors.white,
+    marginRight: spacing.sm,
+  },
+  submitButtonIcon: {
+    fontSize: 20,
+  },
+  bottomSpacing: {
+    height: spacing.xl,
   },
 });

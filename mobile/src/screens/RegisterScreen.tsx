@@ -5,236 +5,464 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Alert,
-  ActivityIndicator,
+  SafeAreaView,
   KeyboardAvoidingView,
   Platform,
+  Alert,
+  ActivityIndicator,
   ScrollView,
+  StatusBar,
 } from "react-native";
-import { useAuth } from "../contexts/AuthContext";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import apiClient from "../services/api";
+import { colors, spacing, borderRadius, shadows, typography } from "../theme";
 
 interface RegisterScreenProps {
   navigation: any;
 }
 
 export default function RegisterScreen({ navigation }: RegisterScreenProps) {
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const { register } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
 
-  const validateEmail = (email: string): boolean => {
+  const validateForm = () => {
+    if (!email.trim()) {
+      Alert.alert("Validation Error", "Please enter your email");
+      return false;
+    }
+
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  };
-
-  const validatePassword = (password: string): boolean => {
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
-    return passwordRegex.test(password);
-  };
-
-  const handleRegister = async () => {
-    // Validation
-    if (!email || !password || !confirmPassword) {
-      Alert.alert("Error", "Please fill in all required fields");
-      return;
+    if (!emailRegex.test(email)) {
+      Alert.alert("Validation Error", "Please enter a valid email address");
+      return false;
     }
 
-    if (!validateEmail(email)) {
-      Alert.alert("Error", "Please enter a valid email address");
-      return;
+    if (!password) {
+      Alert.alert("Validation Error", "Please enter a password");
+      return false;
     }
 
-    if (!validatePassword(password)) {
-      Alert.alert(
-        "Error",
-        "Password must be at least 8 characters long and contain uppercase, lowercase, and numbers"
-      );
-      return;
+    if (password.length < 6) {
+      Alert.alert("Validation Error", "Password must be at least 6 characters");
+      return false;
     }
 
     if (password !== confirmPassword) {
-      Alert.alert("Error", "Passwords do not match");
-      return;
+      Alert.alert("Validation Error", "Passwords do not match");
+      return false;
     }
 
-    setIsLoading(true);
+    if (!agreedToTerms) {
+      Alert.alert("Terms Required", "Please agree to the Terms of Service and Privacy Policy");
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleRegister = async () => {
+    if (!validateForm()) return;
+
+    setLoading(true);
     try {
-      await register(email, password, firstName, lastName);
-      // Navigation will be handled by the auth state change
+      const response = await apiClient.post("/api/auth/register", {
+        email: email.trim().toLowerCase(),
+        password,
+        firstName: firstName.trim() || undefined,
+        lastName: lastName.trim() || undefined,
+      });
+
+      const { accessToken, user } = response.data.data;
+      
+      // Store auth data
+      await AsyncStorage.setItem("authToken", accessToken);
+      await AsyncStorage.setItem("user", JSON.stringify(user));
+      
+      Alert.alert("Success!", "Account created successfully!", [
+        {
+          text: "OK",
+          onPress: () => {
+            // Reload the app
+            navigation.reset({
+              index: 0,
+              routes: [{ name: "Login" }],
+            });
+          },
+        },
+      ]);
     } catch (error: any) {
       Alert.alert(
         "Registration Failed",
-        error.response?.data?.error?.message || "Failed to create account"
+        error.response?.data?.error?.message || "Unable to create account. Please try again."
       );
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-    >
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
+    <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle="dark-content" backgroundColor={colors.white} />
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
-        <View style={styles.content}>
-          <Text style={styles.title}>Create Account</Text>
-          <Text style={styles.subtitle}>Sign up to get started</Text>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          bounces={true}
+          contentContainerStyle={styles.scrollContent}
+        >
+          {/* Header */}
+          <View style={styles.header}>
+            <Text style={styles.logo}>✈️</Text>
+            <Text style={styles.title}>Create Account</Text>
+            <Text style={styles.subtitle}>Start your journey with TravelJoy</Text>
+          </View>
 
+          {/* Registration Form */}
           <View style={styles.form}>
-            <TextInput
-              style={styles.input}
-              placeholder="First Name (Optional)"
-              value={firstName}
-              onChangeText={setFirstName}
-              editable={!isLoading}
-            />
+            {/* Name Inputs */}
+            <View style={styles.nameRow}>
+              <View style={[styles.inputContainer, styles.halfWidth]}>
+                <Text style={styles.inputLabel}>First Name</Text>
+                <View style={styles.inputWrapper}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="John"
+                    placeholderTextColor={colors.textLight}
+                    value={firstName}
+                    onChangeText={setFirstName}
+                    autoCapitalize="words"
+                    editable={!loading}
+                  />
+                </View>
+              </View>
 
-            <TextInput
-              style={styles.input}
-              placeholder="Last Name (Optional)"
-              value={lastName}
-              onChangeText={setLastName}
-              editable={!isLoading}
-            />
+              <View style={[styles.inputContainer, styles.halfWidth]}>
+                <Text style={styles.inputLabel}>Last Name</Text>
+                <View style={styles.inputWrapper}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Doe"
+                    placeholderTextColor={colors.textLight}
+                    value={lastName}
+                    onChangeText={setLastName}
+                    autoCapitalize="words"
+                    editable={!loading}
+                  />
+                </View>
+              </View>
+            </View>
 
-            <TextInput
-              style={styles.input}
-              placeholder="Email *"
-              value={email}
-              onChangeText={setEmail}
-              autoCapitalize="none"
-              keyboardType="email-address"
-              editable={!isLoading}
-            />
+            {/* Email Input */}
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Email</Text>
+              <View style={styles.inputWrapper}>
+                <Text style={styles.inputIcon}>📧</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="your@email.com"
+                  placeholderTextColor={colors.textLight}
+                  value={email}
+                  onChangeText={setEmail}
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                  autoCorrect={false}
+                  editable={!loading}
+                />
+              </View>
+            </View>
 
-            <TextInput
-              style={styles.input}
-              placeholder="Password *"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              editable={!isLoading}
-            />
+            {/* Password Input */}
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Password</Text>
+              <View style={styles.inputWrapper}>
+                <Text style={styles.inputIcon}>🔒</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Min. 6 characters"
+                  placeholderTextColor={colors.textLight}
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry={!showPassword}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  editable={!loading}
+                />
+                <TouchableOpacity
+                  onPress={() => setShowPassword(!showPassword)}
+                  style={styles.eyeButton}
+                >
+                  <Text style={styles.eyeIcon}>{showPassword ? "👁️" : "👁️‍🗨️"}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
 
-            <TextInput
-              style={styles.input}
-              placeholder="Confirm Password *"
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-              secureTextEntry
-              editable={!isLoading}
-            />
+            {/* Confirm Password Input */}
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Confirm Password</Text>
+              <View style={styles.inputWrapper}>
+                <Text style={styles.inputIcon}>🔒</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Re-enter password"
+                  placeholderTextColor={colors.textLight}
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                  secureTextEntry={!showPassword}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  editable={!loading}
+                />
+              </View>
+            </View>
 
-            <Text style={styles.passwordHint}>
-              Password must be at least 8 characters with uppercase, lowercase,
-              and numbers
-            </Text>
-
+            {/* Terms and Conditions */}
             <TouchableOpacity
-              style={[styles.button, isLoading && styles.buttonDisabled]}
-              onPress={handleRegister}
-              disabled={isLoading}
+              style={styles.checkboxRow}
+              onPress={() => setAgreedToTerms(!agreedToTerms)}
+              activeOpacity={0.7}
             >
-              {isLoading ? (
-                <ActivityIndicator color="#fff" />
+              <View style={[styles.checkbox, agreedToTerms && styles.checkboxChecked]}>
+                {agreedToTerms && <Text style={styles.checkmark}>✓</Text>}
+              </View>
+              <Text style={styles.termsText}>
+                I agree to the{" "}
+                <Text style={styles.termsLink}>Terms of Service</Text>
+                {" "}and{" "}
+                <Text style={styles.termsLink}>Privacy Policy</Text>
+              </Text>
+            </TouchableOpacity>
+
+            {/* Register Button */}
+            <TouchableOpacity
+              style={[styles.registerButton, loading && styles.buttonDisabled]}
+              onPress={handleRegister}
+              disabled={loading}
+              activeOpacity={0.8}
+            >
+              {loading ? (
+                <ActivityIndicator color={colors.white} />
               ) : (
-                <Text style={styles.buttonText}>Sign Up</Text>
+                <Text style={styles.registerButtonText}>Create Account</Text>
               )}
             </TouchableOpacity>
 
-            <View style={styles.footer}>
-              <Text style={styles.footerText}>Already have an account? </Text>
-              <TouchableOpacity
-                onPress={() => navigation.navigate("Login")}
-                disabled={isLoading}
-              >
-                <Text style={styles.link}>Sign In</Text>
+            {/* Divider */}
+            <View style={styles.divider}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>or sign up with</Text>
+              <View style={styles.dividerLine} />
+            </View>
+
+            {/* Social Sign Up Buttons */}
+            <View style={styles.socialButtons}>
+              <TouchableOpacity style={styles.socialButton}>
+                <Text style={styles.socialIcon}>📱</Text>
+                <Text style={styles.socialText}>Google</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.socialButton}>
+                <Text style={styles.socialIcon}>📘</Text>
+                <Text style={styles.socialText}>Facebook</Text>
               </TouchableOpacity>
             </View>
           </View>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+
+          {/* Sign In Link */}
+          <View style={styles.signinSection}>
+            <Text style={styles.signinText}>Already have an account? </Text>
+            <TouchableOpacity onPress={() => navigation.navigate("Login")}>
+              <Text style={styles.signinLink}>Sign In</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.bottomSpacing} />
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: colors.white,
+  },
   container: {
     flex: 1,
-    backgroundColor: "#fff",
   },
   scrollContent: {
-    flexGrow: 1,
+    padding: spacing.lg,
   },
-  content: {
-    flex: 1,
-    padding: 24,
-    justifyContent: "center",
+  header: {
+    alignItems: 'center',
+    marginBottom: spacing.xl,
+    marginTop: spacing.lg,
+  },
+  logo: {
+    fontSize: 56,
+    marginBottom: spacing.sm,
   },
   title: {
-    fontSize: 32,
-    fontWeight: "bold",
-    marginBottom: 8,
-    color: "#333",
+    ...typography.h1,
+    color: colors.textPrimary,
+    marginBottom: spacing.xs,
   },
   subtitle: {
-    fontSize: 16,
-    color: "#666",
-    marginBottom: 32,
+    ...typography.body1,
+    color: colors.textSecondary,
   },
   form: {
-    width: "100%",
+    marginBottom: spacing.lg,
+  },
+  nameRow: {
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  halfWidth: {
+    flex: 1,
+  },
+  inputContainer: {
+    marginBottom: spacing.lg,
+  },
+  inputLabel: {
+    ...typography.label,
+    color: colors.textPrimary,
+    marginBottom: spacing.sm,
+  },
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.gray50,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: colors.gray200,
+    paddingHorizontal: spacing.md,
+  },
+  inputIcon: {
+    fontSize: 20,
+    marginRight: spacing.sm,
   },
   input: {
-    backgroundColor: "#f5f5f5",
-    borderRadius: 8,
-    padding: 16,
+    flex: 1,
+    ...typography.body1,
+    color: colors.textPrimary,
+    paddingVertical: spacing.md,
+  },
+  eyeButton: {
+    padding: spacing.xs,
+  },
+  eyeIcon: {
+    fontSize: 20,
+  },
+  checkboxRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: spacing.lg,
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: colors.gray300,
+    marginRight: spacing.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkboxChecked: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  checkmark: {
+    color: colors.white,
     fontSize: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: "#e0e0e0",
+    fontWeight: '700',
   },
-  passwordHint: {
-    fontSize: 12,
-    color: "#666",
-    marginBottom: 24,
-    marginTop: -8,
+  termsText: {
+    ...typography.body2,
+    color: colors.textSecondary,
+    flex: 1,
   },
-  button: {
-    backgroundColor: "#007AFF",
-    borderRadius: 8,
-    padding: 16,
-    alignItems: "center",
-    marginBottom: 16,
+  termsLink: {
+    color: colors.primary,
+    fontWeight: '600',
+  },
+  registerButton: {
+    backgroundColor: colors.primary,
+    borderRadius: borderRadius.lg,
+    padding: spacing.lg,
+    alignItems: 'center',
+    ...shadows.md,
   },
   buttonDisabled: {
-    opacity: 0.6,
+    backgroundColor: colors.gray400,
   },
-  buttonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
+  registerButtonText: {
+    ...typography.button,
+    color: colors.white,
   },
-  footer: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: spacing.lg,
   },
-  footerText: {
-    color: "#666",
-    fontSize: 14,
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: colors.gray200,
   },
-  link: {
-    color: "#007AFF",
-    fontSize: 14,
-    fontWeight: "600",
+  dividerText: {
+    ...typography.body2,
+    color: colors.textLight,
+    marginHorizontal: spacing.md,
+  },
+  socialButtons: {
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  socialButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.white,
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.gray200,
+  },
+  socialIcon: {
+    fontSize: 20,
+    marginRight: spacing.sm,
+  },
+  socialText: {
+    ...typography.body2,
+    color: colors.textPrimary,
+    fontWeight: '600',
+  },
+  signinSection: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: spacing.md,
+  },
+  signinText: {
+    ...typography.body2,
+    color: colors.textSecondary,
+  },
+  signinLink: {
+    ...typography.body2,
+    color: colors.primary,
+    fontWeight: '600',
+  },
+  bottomSpacing: {
+    height: spacing.xl,
   },
 });

@@ -120,7 +120,7 @@ export default function TrncesScreen({ navigation }: any) {
   };
 
   if (loading) {
-    return <LoadingSpinner fullScreen message="Saving preferences..." />;
+    return <LoadingSpinner fullScreen={true} message="Saving preferences..." />;
   }
 
   return (

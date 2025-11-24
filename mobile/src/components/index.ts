@@ -7,3 +7,6 @@ export { default as ErrorBoundary } from "./ErrorBoundary";
 export { default as OptimizedImage } from "./OptimizedImage";
 export { default as ErrorMessage } from "./ErrorMessage";
 export { default as OfflineIndicator } from "./OfflineIndicator";
+export { default as DestinationCard } from "./DestinationCard";
+export { default as SearchBar } from "./SearchBar";
+export { default as CategoryChip } from "./CategoryChip";
