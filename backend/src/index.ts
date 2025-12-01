@@ -10,7 +10,7 @@ import { errorHandler, notFoundHandler } from "./middleware/errorHandler";
 dotenv.config();
 
 const app: Application = express();
-const PORT = process.env.PORT || 3000;
+const PORT = Number(process.env.PORT) || 3000;
 
 // Middleware
 app.use(cors());
@@ -38,9 +38,11 @@ app.use(notFoundHandler);
 // Global error handler (must be last)
 app.use(errorHandler);
 
-// Start server
-app.listen(PORT, () => {
+// Start server - listen on all interfaces (0.0.0.0) to allow connections from other devices
+app.listen(PORT, "0.0.0.0", () => {
   console.log(`Server is running on port ${PORT}`);
+  console.log(`Accessible at: http://localhost:${PORT}`);
+  console.log(`Accessible from network at: http://192.168.16.108:${PORT}`);
 });
 
 export default app;

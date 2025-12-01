@@ -5,11 +5,12 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SubscriptionStatus = exports.SUBSCRIPTION_PLANS = void 0;
 const stripe_1 = __importDefault(require("stripe"));
-const client_1 = require("@prisma/client");
-const prisma = new client_1.PrismaClient();
-const stripe = new stripe_1.default(process.env.STRIPE_SECRET_KEY || "", {
-    apiVersion: "2025-10-29.clover",
-});
+const database_1 = __importDefault(require("../config/database"));
+// Initialize Stripe only if API key is provided
+const stripeKey = process.env.STRIPE_SECRET_KEY;
+const stripe = stripeKey && stripeKey !== ""
+    ? new stripe_1.default(stripeKey, { apiVersion: "2025-10-29.clover" })
+    : null;
 exports.SUBSCRIPTION_PLANS = [
     {
         id: "free_trial",
@@ -65,8 +66,26 @@ var SubscriptionStatus;
 class SubscriptionService {
     async createSubscription(input) {
         const { userId, planId, paymentMethodId } = input;
+        // Check if Stripe is configured - if not, create a free subscription
+        if (!stripe || !process.env.STRIPE_SECRET_KEY) {
+            console.warn("Stripe not configured - creating free subscription");
+            // Create a free local subscription without Stripe
+            const freeSubscription = await database_1.default.subscription.create({
+                data: {
+                    userId,
+                    planId: "free",
+                    status: "active",
+                    currentPeriodStart: new Date(),
+                    currentPeriodEnd: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year
+                    stripeSubscriptionId: `free_${userId}`,
+                },
+            });
+            return {
+                subscription: freeSubscription,
+            };
+        }
         // Get user
-        const user = await prisma.user.findUnique({
+        const user = await database_1.default.user.findUnique({
             where: { id: userId },
             include: { subscription: true },
         });
@@ -86,7 +105,7 @@ class SubscriptionService {
         if (planId === "free_trial") {
             const trialEnd = new Date();
             trialEnd.setDate(trialEnd.getDate() + 7);
-            const subscription = await prisma.subscription.create({
+            const subscription = await database_1.default.subscription.create({
                 data: {
                     userId,
                     planId,
@@ -139,7 +158,7 @@ class SubscriptionService {
         });
         // Save subscription to database
         const subData = stripeSubscription;
-        const subscription = await prisma.subscription.create({
+        const subscription = await database_1.default.subscription.create({
             data: {
                 userId,
                 planId,
@@ -160,16 +179,16 @@ class SubscriptionService {
         };
     }
     async cancelSubscription(subscriptionId) {
-        const subscription = await prisma.subscription.findUnique({
+        const subscription = await database_1.default.subscription.findUnique({
             where: { id: subscriptionId },
         });
         if (!subscription) {
             throw new Error("Subscription not found");
         }
         // Cancel at period end in Stripe
-        if (subscription.stripeSubscriptionId.startsWith("trial_")) {
-            // For trial subscriptions, just mark as canceled
-            await prisma.subscription.update({
+        if (subscription.stripeSubscriptionId.startsWith("trial_") || subscription.stripeSubscriptionId.startsWith("free_")) {
+            // For trial/free subscriptions, just mark as canceled
+            await database_1.default.subscription.update({
                 where: { id: subscriptionId },
                 data: {
                     status: SubscriptionStatus.CANCELED,
@@ -177,18 +196,18 @@ class SubscriptionService {
                 },
             });
         }
-        else {
+        else if (stripe) {
             await stripe.subscriptions.update(subscription.stripeSubscriptionId, {
                 cancel_at_period_end: true,
             });
-            await prisma.subscription.update({
+            await database_1.default.subscription.update({
                 where: { id: subscriptionId },
                 data: { cancelAtPeriodEnd: true },
             });
         }
     }
     async checkSubscriptionStatus(userId) {
-        const subscription = await prisma.subscription.findUnique({
+        const subscription = await database_1.default.subscription.findUnique({
             where: { userId },
         });
         if (!subscription) {
@@ -200,7 +219,7 @@ class SubscriptionService {
             };
         }
         const plan = exports.SUBSCRIPTION_PLANS.find((p) => p.id === subscription.planId);
-        const user = await prisma.user.findUnique({ where: { id: userId } });
+        const user = await database_1.default.user.findUnique({ where: { id: userId } });
         // Check if subscription is active
         const isActive = subscription.status === SubscriptionStatus.ACTIVE ||
             subscription.status === SubscriptionStatus.TRIALING;
@@ -244,12 +263,12 @@ class SubscriptionService {
         }
     }
     async handleSubscriptionUpdate(stripeSubscription) {
-        const subscription = await prisma.subscription.findUnique({
+        const subscription = await database_1.default.subscription.findUnique({
             where: { stripeSubscriptionId: stripeSubscription.id },
         });
         if (subscription) {
             const subData = stripeSubscription;
-            await prisma.subscription.update({
+            await database_1.default.subscription.update({
                 where: { id: subscription.id },
                 data: {
                     status: stripeSubscription.status,
@@ -261,11 +280,11 @@ class SubscriptionService {
         }
     }
     async handleSubscriptionDeleted(stripeSubscription) {
-        const subscription = await prisma.subscription.findUnique({
+        const subscription = await database_1.default.subscription.findUnique({
             where: { stripeSubscriptionId: stripeSubscription.id },
         });
         if (subscription) {
-            await prisma.subscription.update({
+            await database_1.default.subscription.update({
                 where: { id: subscription.id },
                 data: { status: SubscriptionStatus.CANCELED },
             });
@@ -274,12 +293,12 @@ class SubscriptionService {
     async handlePaymentSucceeded(invoice) {
         const subscriptionId = invoice.subscription;
         if (subscriptionId) {
-            const subscription = await prisma.subscription.findUnique({
+            const subscription = await database_1.default.subscription.findUnique({
                 where: { stripeSubscriptionId: subscriptionId },
             });
             if (subscription) {
                 // Reset monthly trip counter on successful payment
-                await prisma.user.update({
+                await database_1.default.user.update({
                     where: { id: subscription.userId },
                     data: { tripsThisMonth: 0 },
                 });
@@ -289,11 +308,11 @@ class SubscriptionService {
     async handlePaymentFailed(invoice) {
         const subscriptionId = invoice.subscription;
         if (subscriptionId) {
-            const subscription = await prisma.subscription.findUnique({
+            const subscription = await database_1.default.subscription.findUnique({
                 where: { stripeSubscriptionId: subscriptionId },
             });
             if (subscription) {
-                await prisma.subscription.update({
+                await database_1.default.subscription.update({
                     where: { id: subscription.id },
                     data: { status: SubscriptionStatus.PAST_DUE },
                 });

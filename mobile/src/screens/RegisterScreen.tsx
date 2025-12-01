@@ -48,8 +48,18 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
       return false;
     }
 
-    if (password.length < 6) {
-      Alert.alert("Validation Error", "Password must be at least 6 characters");
+    // Password must be at least 8 characters with uppercase, lowercase, and numbers
+    if (password.length < 8) {
+      Alert.alert("Validation Error", "Password must be at least 8 characters");
+      return false;
+    }
+
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+    if (!passwordRegex.test(password)) {
+      Alert.alert(
+        "Validation Error",
+        "Password must contain at least one uppercase letter, one lowercase letter, and one number"
+      );
       return false;
     }
 
@@ -71,12 +81,25 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
 
     setLoading(true);
     try {
+      // Log the registration attempt
+      console.log("=== REGISTRATION ATTEMPT ===");
+      console.log("Email:", email.trim().toLowerCase());
+      console.log("First Name:", firstName.trim() || "undefined");
+      console.log("Last Name:", lastName.trim() || "undefined");
+      console.log("Password Length:", password.length);
+      console.log("============================");
+      
       const response = await apiClient.post("/api/auth/register", {
         email: email.trim().toLowerCase(),
         password,
         firstName: firstName.trim() || undefined,
         lastName: lastName.trim() || undefined,
       });
+      
+      console.log("=== REGISTRATION SUCCESS ===");
+      console.log("Response Status:", response.status);
+      console.log("Response Data:", JSON.stringify(response.data, null, 2));
+      console.log("===========================");
 
       const { accessToken, user } = response.data.data;
       
@@ -97,9 +120,31 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
         },
       ]);
     } catch (error: any) {
+      // Detailed error logging
+      console.error("=== REGISTRATION ERROR ===");
+      console.error("Error Type:", error?.constructor?.name);
+      console.error("Error Message:", error?.message);
+      
+      if (error.response) {
+        console.error("Response Status:", error.response.status);
+        console.error("Response Data:", JSON.stringify(error.response.data, null, 2));
+        console.error("Response Headers:", JSON.stringify(error.response.headers, null, 2));
+      } else if (error.request) {
+        console.error("Request made but no response:", error.request);
+      }
+      
+      console.error("Full Error Object:", JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
+      console.error("=========================");
+      
+      // Show user-friendly error message
+      const errorMessage = 
+        error.response?.data?.error?.message || 
+        error.message || 
+        "Unable to create account. Please try again.";
+      
       Alert.alert(
         "Registration Failed",
-        error.response?.data?.error?.message || "Unable to create account. Please try again."
+        errorMessage
       );
     } finally {
       setLoading(false);
@@ -186,7 +231,7 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
                 <Text style={styles.inputIcon}>🔒</Text>
                 <TextInput
                   style={styles.input}
-                  placeholder="Min. 6 characters"
+                  placeholder="Min. 8 chars, A-Z, a-z, 0-9"
                   placeholderTextColor={colors.textLight}
                   value={password}
                   onChangeText={setPassword}

@@ -1,9 +1,7 @@
-import { PrismaClient } from "@prisma/client";
 import { aiService, ItineraryGenerationParams, DailyPlan } from "./aiService";
 import weatherService from "./weatherService";
 import nominatimService from "./nominatimService";
-
-const prisma = new PrismaClient();
+import prisma from "../config/database";
 
 export interface TripInput {
   userId: string;
