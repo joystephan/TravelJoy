@@ -1,6 +1,7 @@
 import React from 'react';
 import {
   View,
+  Text,
   TextInput,
   TouchableOpacity,
   StyleSheet,
@@ -55,7 +56,7 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
+    marginBottom: spacing.sm,
   },
   searchContainer: {
     flex: 1,
@@ -84,12 +85,10 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.xl,
     justifyContent: 'center',
     alignItems: 'center',
+    marginLeft: spacing.sm,
     ...shadows.sm,
   },
   filterIcon: {
     fontSize: 20,
   },
 });
-
-
-

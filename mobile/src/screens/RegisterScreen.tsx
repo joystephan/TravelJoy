@@ -13,8 +13,7 @@ import {
   ScrollView,
   StatusBar,
 } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import apiClient from "../services/api";
+import { useAuth } from "../contexts/AuthContext";
 import { colors, spacing, borderRadius, shadows, typography } from "../theme";
 
 interface RegisterScreenProps {
@@ -30,6 +29,7 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const { register } = useAuth();
 
   const validateForm = () => {
     if (!email.trim()) {
@@ -81,44 +81,18 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
 
     setLoading(true);
     try {
-      // Log the registration attempt
-      console.log("=== REGISTRATION ATTEMPT ===");
-      console.log("Email:", email.trim().toLowerCase());
-      console.log("First Name:", firstName.trim() || "undefined");
-      console.log("Last Name:", lastName.trim() || "undefined");
-      console.log("Password Length:", password.length);
-      console.log("============================");
-      
-      const response = await apiClient.post("/api/auth/register", {
-        email: email.trim().toLowerCase(),
+      // Use AuthContext register method which handles token storage and state update
+      await register(
+        email.trim().toLowerCase(),
         password,
-        firstName: firstName.trim() || undefined,
-        lastName: lastName.trim() || undefined,
-      });
+        firstName.trim() || undefined,
+        lastName.trim() || undefined
+      );
       
-      console.log("=== REGISTRATION SUCCESS ===");
-      console.log("Response Status:", response.status);
-      console.log("Response Data:", JSON.stringify(response.data, null, 2));
-      console.log("===========================");
-
-      const { accessToken, user } = response.data.data;
-      
-      // Store auth data
-      await AsyncStorage.setItem("authToken", accessToken);
-      await AsyncStorage.setItem("user", JSON.stringify(user));
-      
-      Alert.alert("Success!", "Account created successfully!", [
-        {
-          text: "OK",
-          onPress: () => {
-            // Reload the app
-            navigation.reset({
-              index: 0,
-              routes: [{ name: "Login" }],
-            });
-          },
-        },
-      ]);
+      // Navigation will automatically happen via RootNavigator
+      // No need to manually navigate - the AuthContext will trigger a re-render
+      // and RootNavigator will switch to AppNavigator
+      Alert.alert("Success!", "Account created successfully!");
     } catch (error: any) {
       // Detailed error logging
       console.error("=== REGISTRATION ERROR ===");

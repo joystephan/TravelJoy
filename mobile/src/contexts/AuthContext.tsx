@@ -66,8 +66,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   // Memoize callbacks to prevent unnecessary re-renders
   const login = useCallback(async (email: string, password: string) => {
-    const response = await authService.login({ email, password });
-    setUser(response.user);
+    try {
+      const response = await authService.login({ email, password });
+      setUser(response.user);
+    } catch (error) {
+      // Re-throw error so the calling component can handle it
+      throw error;
+    }
   }, []);
 
   const register = useCallback(
@@ -77,13 +82,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       firstName?: string,
       lastName?: string
     ) => {
-      const response = await authService.register({
-        email,
-        password,
-        firstName,
-        lastName,
-      });
-      setUser(response.user);
+      try {
+        const response = await authService.register({
+          email,
+          password,
+          firstName,
+          lastName,
+        });
+        setUser(response.user);
+      } catch (error) {
+        // Re-throw error so the calling component can handle it
+        throw error;
+      }
     },
     []
   );
