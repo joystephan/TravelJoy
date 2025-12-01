@@ -285,3 +285,5 @@ Implemented smooth transitions:
 
 **This reference shows the complete UI structure of TravelJoy!** 🎉
 
+
+

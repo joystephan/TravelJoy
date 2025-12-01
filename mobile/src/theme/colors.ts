@@ -58,3 +58,5 @@ export const gradients = {
 };
 
 export default colors;
+
+
