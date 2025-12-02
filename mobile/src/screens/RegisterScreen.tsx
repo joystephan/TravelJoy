@@ -13,8 +13,7 @@ import {
   ScrollView,
   StatusBar,
 } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import apiClient from "../services/api";
+import { useAuth } from "../contexts/AuthContext";
 import { colors, spacing, borderRadius, shadows, typography } from "../theme";
 
 interface RegisterScreenProps {
@@ -30,6 +29,7 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const { register } = useAuth();
 
   const validateForm = () => {
     if (!email.trim()) {
@@ -48,8 +48,18 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
       return false;
     }
 
-    if (password.length < 6) {
-      Alert.alert("Validation Error", "Password must be at least 6 characters");
+    // Password must be at least 8 characters with uppercase, lowercase, and numbers
+    if (password.length < 8) {
+      Alert.alert("Validation Error", "Password must be at least 8 characters");
+      return false;
+    }
+
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+    if (!passwordRegex.test(password)) {
+      Alert.alert(
+        "Validation Error",
+        "Password must contain at least one uppercase letter, one lowercase letter, and one number"
+      );
       return false;
     }
 
@@ -71,35 +81,44 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
 
     setLoading(true);
     try {
-      const response = await apiClient.post("/api/auth/register", {
-        email: email.trim().toLowerCase(),
+      // Use AuthContext register method which handles token storage and state update
+      await register(
+        email.trim().toLowerCase(),
         password,
-        firstName: firstName.trim() || undefined,
-        lastName: lastName.trim() || undefined,
-      });
-
-      const { accessToken, user } = response.data.data;
+        firstName.trim() || undefined,
+        lastName.trim() || undefined
+      );
       
-      // Store auth data
-      await AsyncStorage.setItem("authToken", accessToken);
-      await AsyncStorage.setItem("user", JSON.stringify(user));
-      
-      Alert.alert("Success!", "Account created successfully!", [
-        {
-          text: "OK",
-          onPress: () => {
-            // Reload the app
-            navigation.reset({
-              index: 0,
-              routes: [{ name: "Login" }],
-            });
-          },
-        },
-      ]);
+      // Navigation will automatically happen via RootNavigator
+      // No need to manually navigate - the AuthContext will trigger a re-render
+      // and RootNavigator will switch to AppNavigator
+      Alert.alert("Success!", "Account created successfully!");
     } catch (error: any) {
+      // Detailed error logging
+      console.error("=== REGISTRATION ERROR ===");
+      console.error("Error Type:", error?.constructor?.name);
+      console.error("Error Message:", error?.message);
+      
+      if (error.response) {
+        console.error("Response Status:", error.response.status);
+        console.error("Response Data:", JSON.stringify(error.response.data, null, 2));
+        console.error("Response Headers:", JSON.stringify(error.response.headers, null, 2));
+      } else if (error.request) {
+        console.error("Request made but no response:", error.request);
+      }
+      
+      console.error("Full Error Object:", JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
+      console.error("=========================");
+      
+      // Show user-friendly error message
+      const errorMessage = 
+        error.response?.data?.error?.message || 
+        error.message || 
+        "Unable to create account. Please try again.";
+      
       Alert.alert(
         "Registration Failed",
-        error.response?.data?.error?.message || "Unable to create account. Please try again."
+        errorMessage
       );
     } finally {
       setLoading(false);
@@ -186,7 +205,7 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
                 <Text style={styles.inputIcon}>🔒</Text>
                 <TextInput
                   style={styles.input}
-                  placeholder="Min. 6 characters"
+                  placeholder="Min. 8 chars, A-Z, a-z, 0-9"
                   placeholderTextColor={colors.textLight}
                   value={password}
                   onChangeText={setPassword}

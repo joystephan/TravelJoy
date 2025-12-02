@@ -1,7 +1,5 @@
 import Stripe from "stripe";
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import prisma from "../config/database";
 
 // Initialize Stripe only if API key is provided
 const stripeKey = process.env.STRIPE_SECRET_KEY;

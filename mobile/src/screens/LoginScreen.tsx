@@ -12,8 +12,7 @@ import {
   ActivityIndicator,
   StatusBar,
 } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import apiClient from "../services/api";
+import { useAuth } from "../contexts/AuthContext";
 import { colors, spacing, borderRadius, shadows, typography } from "../theme";
 
 interface LoginScreenProps {
@@ -25,6 +24,7 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const { login } = useAuth();
 
   const handleLogin = async () => {
     if (!email.trim() || !password) {
@@ -34,34 +34,16 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
 
     setLoading(true);
     try {
-      const response = await apiClient.post("/api/auth/login", {
-        email: email.trim().toLowerCase(),
-        password,
-      });
-
-      const { accessToken, user } = response.data.data;
+      // Use AuthContext login method which handles token storage and state update
+      await login(email.trim().toLowerCase(), password);
       
-      // Store auth data
-      await AsyncStorage.setItem("authToken", accessToken);
-      await AsyncStorage.setItem("user", JSON.stringify(user));
-      
-      // Force app reload to show authenticated screens
-      Alert.alert("Success!", "Login successful!", [
-        {
-          text: "OK",
-          onPress: () => {
-            // Reload the app
-            navigation.reset({
-              index: 0,
-              routes: [{ name: "Login" }],
-            });
-          },
-        },
-      ]);
+      // Navigation will automatically happen via RootNavigator
+      // No need to manually navigate - the AuthContext will trigger a re-render
+      // and RootNavigator will switch to AppNavigator
     } catch (error: any) {
       Alert.alert(
         "Login Failed",
-        error.response?.data?.error?.message || "Invalid email or password. Please try again."
+        error.response?.data?.error?.message || error.message || "Invalid email or password. Please try again."
       );
     } finally {
       setLoading(false);

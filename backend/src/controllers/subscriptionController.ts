@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import subscriptionService from "../services/subscriptionService";
 import Stripe from "stripe";
+import prisma from "../config/database";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
   apiVersion: "2025-10-29.clover",
@@ -75,8 +76,6 @@ export const cancelSubscription = async (
     const userId = (req as any).user.id;
 
     // Verify subscription belongs to user
-    const { PrismaClient } = await import("@prisma/client");
-    const prisma = new PrismaClient();
     const subscription = await prisma.subscription.findUnique({
       where: { id: subscriptionId },
     });

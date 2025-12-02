@@ -4,18 +4,17 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.tripService = void 0;
-const client_1 = require("@prisma/client");
 const aiService_1 = require("./aiService");
 const weatherService_1 = __importDefault(require("./weatherService"));
 const nominatimService_1 = __importDefault(require("./nominatimService"));
-const prisma = new client_1.PrismaClient();
+const database_1 = __importDefault(require("../config/database"));
 class TripService {
     /**
      * Create a new trip with AI-generated itinerary
      */
     async createTrip(tripData) {
         // Validate user subscription and trip limits
-        const user = await prisma.user.findUnique({
+        const user = await database_1.default.user.findUnique({
             where: { id: tripData.userId },
             include: { subscription: true },
         });
@@ -27,7 +26,7 @@ class TripService {
             throw new Error("Active subscription required to create trips");
         }
         // Create trip record
-        const trip = await prisma.trip.create({
+        const trip = await database_1.default.trip.create({
             data: {
                 userId: tripData.userId,
                 destination: tripData.destination,
@@ -41,7 +40,7 @@ class TripService {
         this.generateItineraryForTrip(trip.id, tripData).catch((error) => {
             console.error(`Failed to generate itinerary for trip ${trip.id}:`, error);
             // Update trip status to failed
-            prisma.trip.update({
+            database_1.default.trip.update({
                 where: { id: trip.id },
                 data: { status: "failed" },
             });
@@ -91,7 +90,7 @@ class TripService {
             // Save itinerary to database
             await this.saveDailyPlans(tripId, dailyPlans);
             // Update trip status
-            await prisma.trip.update({
+            await database_1.default.trip.update({
                 where: { id: tripId },
                 data: { status: "completed" },
             });
@@ -99,7 +98,7 @@ class TripService {
         }
         catch (error) {
             console.error("Itinerary generation failed:", error);
-            await prisma.trip.update({
+            await database_1.default.trip.update({
                 where: { id: tripId },
                 data: { status: "failed" },
             });
@@ -111,7 +110,7 @@ class TripService {
      */
     async saveDailyPlans(tripId, dailyPlans) {
         for (const plan of dailyPlans) {
-            const dailyPlan = await prisma.dailyPlan.create({
+            const dailyPlan = await database_1.default.dailyPlan.create({
                 data: {
                     tripId,
                     date: plan.date,
@@ -120,7 +119,7 @@ class TripService {
             });
             // Save activities
             if (plan.activities && plan.activities.length > 0) {
-                await prisma.activity.createMany({
+                await database_1.default.activity.createMany({
                     data: plan.activities.map((activity) => ({
                         dailyPlanId: dailyPlan.id,
                         name: activity.name,
@@ -135,7 +134,7 @@ class TripService {
             }
             // Save meals
             if (plan.meals && plan.meals.length > 0) {
-                await prisma.meal.createMany({
+                await database_1.default.meal.createMany({
                     data: plan.meals.map((meal) => ({
                         dailyPlanId: dailyPlan.id,
                         name: meal.name,
@@ -149,7 +148,7 @@ class TripService {
             }
             // Save transportation
             if (plan.transportation && plan.transportation.length > 0) {
-                await prisma.transportation.createMany({
+                await database_1.default.transportation.createMany({
                     data: plan.transportation.map((transport) => ({
                         dailyPlanId: dailyPlan.id,
                         fromLocation: transport.from,
@@ -170,7 +169,7 @@ class TripService {
      * Get trip by ID with full itinerary
      */
     async getTripById(tripId) {
-        const trip = await prisma.trip.findUnique({
+        const trip = await database_1.default.trip.findUnique({
             where: { id: tripId },
             include: {
                 dailyPlans: {
@@ -194,7 +193,7 @@ class TripService {
      * Get all trips for a user
      */
     async getUserTrips(userId) {
-        return prisma.trip.findMany({
+        return database_1.default.trip.findMany({
             where: { userId },
             include: {
                 dailyPlans: {
@@ -214,7 +213,7 @@ class TripService {
      * Update an activity in the itinerary
      */
     async updateActivity(activityId, updates) {
-        return prisma.activity.update({
+        return database_1.default.activity.update({
             where: { id: activityId },
             data: updates,
         });
@@ -223,7 +222,7 @@ class TripService {
      * Delete an activity from the itinerary
      */
     async deleteActivity(activityId) {
-        return prisma.activity.delete({
+        return database_1.default.activity.delete({
             where: { id: activityId },
         });
     }
@@ -231,13 +230,13 @@ class TripService {
      * Replace an activity with an alternative
      */
     async replaceActivity(activityId, newActivity) {
-        const activity = await prisma.activity.findUnique({
+        const activity = await database_1.default.activity.findUnique({
             where: { id: activityId },
         });
         if (!activity) {
             throw new Error("Activity not found");
         }
-        return prisma.activity.update({
+        return database_1.default.activity.update({
             where: { id: activityId },
             data: {
                 ...newActivity,
@@ -309,14 +308,14 @@ class TripService {
             preferences: constraints.preferences,
         });
         // Delete existing daily plans
-        await prisma.dailyPlan.deleteMany({
+        await database_1.default.dailyPlan.deleteMany({
             where: { tripId },
         });
         // Save optimized plans
         await this.saveDailyPlans(tripId, optimizedPlans);
         // Update trip budget if provided
         if (constraints.budget) {
-            await prisma.trip.update({
+            await database_1.default.trip.update({
                 where: { id: tripId },
                 data: { budget: constraints.budget },
             });
@@ -327,7 +326,7 @@ class TripService {
      * Delete a trip
      */
     async deleteTrip(tripId) {
-        return prisma.trip.delete({
+        return database_1.default.trip.delete({
             where: { id: tripId },
         });
     }

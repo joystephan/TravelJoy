@@ -6,8 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AuthService = void 0;
 const bcrypt_1 = __importDefault(require("bcrypt"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
-const client_1 = require("@prisma/client");
-const prisma = new client_1.PrismaClient();
+const database_1 = __importDefault(require("../config/database"));
 class AuthService {
     constructor() {
         this.SALT_ROUNDS = 10;
@@ -25,7 +24,7 @@ class AuthService {
             throw new Error("Password must be at least 8 characters long and contain uppercase, lowercase, and numbers");
         }
         // Check if user already exists
-        const existingUser = await prisma.user.findUnique({
+        const existingUser = await database_1.default.user.findUnique({
             where: { email: data.email.toLowerCase() },
         });
         if (existingUser) {
@@ -34,7 +33,7 @@ class AuthService {
         // Hash password
         const passwordHash = await bcrypt_1.default.hash(data.password, this.SALT_ROUNDS);
         // Create user
-        const user = await prisma.user.create({
+        const user = await database_1.default.user.create({
             data: {
                 email: data.email.toLowerCase(),
                 passwordHash,
@@ -47,7 +46,7 @@ class AuthService {
     }
     async login(data) {
         // Find user by email
-        const user = await prisma.user.findUnique({
+        const user = await database_1.default.user.findUnique({
             where: { email: data.email.toLowerCase() },
         });
         if (!user) {
@@ -63,7 +62,7 @@ class AuthService {
     }
     async resetPasswordRequest(email) {
         // Find user by email
-        const user = await prisma.user.findUnique({
+        const user = await database_1.default.user.findUnique({
             where: { email: email.toLowerCase() },
         });
         if (!user) {
@@ -91,7 +90,7 @@ class AuthService {
             // Hash new password
             const passwordHash = await bcrypt_1.default.hash(newPassword, this.SALT_ROUNDS);
             // Update user password
-            await prisma.user.update({
+            await database_1.default.user.update({
                 where: { id: decoded.userId },
                 data: { passwordHash },
             });
@@ -107,7 +106,7 @@ class AuthService {
         try {
             const decoded = jsonwebtoken_1.default.verify(token, this.JWT_SECRET);
             // Fetch user from database
-            const user = await prisma.user.findUnique({
+            const user = await database_1.default.user.findUnique({
                 where: { id: decoded.userId },
                 select: {
                     id: true,

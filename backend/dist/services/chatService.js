@@ -1,10 +1,12 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.chatService = void 0;
-const client_1 = require("@prisma/client");
 const aiService_1 = require("./aiService");
 const tripService_1 = require("./tripService");
-const prisma = new client_1.PrismaClient();
+const database_1 = __importDefault(require("../config/database"));
 class ChatService {
     constructor() {
         this.sessions = new Map();
@@ -102,7 +104,7 @@ class ChatService {
         if (response.action === "update_plan" && response.updatedPlan && tripId) {
             try {
                 // Delete existing daily plans
-                await prisma.dailyPlan.deleteMany({
+                await database_1.default.dailyPlan.deleteMany({
                     where: { tripId },
                 });
                 // Save updated plans
@@ -152,7 +154,7 @@ class ChatService {
      */
     async saveDailyPlans(tripId, dailyPlans) {
         for (const plan of dailyPlans) {
-            const dailyPlan = await prisma.dailyPlan.create({
+            const dailyPlan = await database_1.default.dailyPlan.create({
                 data: {
                     tripId,
                     date: plan.date,
@@ -161,7 +163,7 @@ class ChatService {
             });
             // Save activities
             if (plan.activities && plan.activities.length > 0) {
-                await prisma.activity.createMany({
+                await database_1.default.activity.createMany({
                     data: plan.activities.map((activity) => ({
                         dailyPlanId: dailyPlan.id,
                         name: activity.name,
@@ -176,7 +178,7 @@ class ChatService {
             }
             // Save meals
             if (plan.meals && plan.meals.length > 0) {
-                await prisma.meal.createMany({
+                await database_1.default.meal.createMany({
                     data: plan.meals.map((meal) => ({
                         dailyPlanId: dailyPlan.id,
                         name: meal.name,
@@ -190,7 +192,7 @@ class ChatService {
             }
             // Save transportation
             if (plan.transportation && plan.transportation.length > 0) {
-                await prisma.transportation.createMany({
+                await database_1.default.transportation.createMany({
                     data: plan.transportation.map((transport) => ({
                         dailyPlanId: dailyPlan.id,
                         fromLocation: transport.from,

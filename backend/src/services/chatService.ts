@@ -1,8 +1,6 @@
-import { PrismaClient } from "@prisma/client";
 import { aiService, ChatContext, ChatResponse } from "./aiService";
 import { tripService } from "./tripService";
-
-const prisma = new PrismaClient();
+import prisma from "../config/database";
 
 export interface ChatMessage {
   role: "user" | "assistant";
