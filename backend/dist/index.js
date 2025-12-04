@@ -13,7 +13,7 @@ const chatRoutes_1 = __importDefault(require("./routes/chatRoutes"));
 const errorHandler_1 = require("./middleware/errorHandler");
 dotenv_1.default.config();
 const app = (0, express_1.default)();
-const PORT = process.env.PORT || 3000;
+const PORT = Number(process.env.PORT) || 3000;
 // Middleware
 app.use((0, cors_1.default)());
 // Webhook route needs raw body for Stripe signature verification
