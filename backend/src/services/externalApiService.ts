@@ -1,6 +1,7 @@
 import nominatimService from "./nominatimService";
 import weatherService from "./weatherService";
 import countriesService from "./countriesService";
+import hotelService from "./hotelService";
 
 /**
  * Unified External API Service
@@ -98,43 +99,10 @@ class ExternalApiService {
 
   /**
    * Search for hotels in a location
+   * Uses Overpass API for detailed hotel data, falls back to Nominatim
    */
   async searchHotels(location: string, options?: { limit?: number }) {
-    try {
-      // Search for hotels in the location
-      const query = `hotel ${location}`;
-      const hotels = await this.searchPlaces(query, {
-        limit: options?.limit || 20,
-        addressDetails: true,
-      });
-
-      // Filter to only include places that are likely hotels
-      const filteredHotels = hotels.filter(
-        (place) =>
-          place.type === "hotel" ||
-          place.name.toLowerCase().includes("hotel") ||
-          place.displayName.toLowerCase().includes("hotel")
-      );
-
-      // Map to hotel format with additional details
-      return filteredHotels.map((place) => ({
-        id: place.placeId,
-        name: place.name,
-        address: place.displayName,
-        location: {
-          latitude: place.coordinates.lat,
-          longitude: place.coordinates.lon,
-        },
-        city: place.address?.city || place.address?.state || location,
-        country: place.address?.country || "",
-        rating: Math.random() * 2 + 3.5, // Mock rating (4.0-5.5) - in production, use real data
-        price: Math.floor(Math.random() * 200 + 50), // Mock price ($50-$250) - in production, use real data
-        imageUrl: `https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400&q=80`, // Default hotel image
-      }));
-    } catch (error) {
-      console.error("Error searching hotels:", error);
-      throw new Error("Failed to search hotels");
-    }
+    return hotelService.searchHotels(location, options);
   }
 
   /**
