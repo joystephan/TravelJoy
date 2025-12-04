@@ -5,6 +5,7 @@ import authRoutes from "./routes/authRoutes";
 import subscriptionRoutes from "./routes/subscriptionRoutes";
 import tripRoutes from "./routes/tripRoutes";
 import chatRoutes from "./routes/chatRoutes";
+import hotelRoutes from "./routes/hotelRoutes";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler";
 
 dotenv.config();
@@ -31,6 +32,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/subscription", subscriptionRoutes);
 app.use("/api/trips", tripRoutes);
 app.use("/api/chat", chatRoutes);
+app.use("/api/hotels", hotelRoutes);
 
 // 404 handler for undefined routes
 app.use(notFoundHandler);

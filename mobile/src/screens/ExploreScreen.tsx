@@ -13,6 +13,9 @@ import { colors, spacing, borderRadius, shadows, typography } from '../theme';
 import SearchBar from '../components/SearchBar';
 import CategoryChip from '../components/CategoryChip';
 import DestinationCard from '../components/DestinationCard';
+import HotelCard from '../components/HotelCard';
+import LoadingSpinner from '../components/LoadingSpinner';
+import { hotelService, Hotel } from '../services/hotelService';
 
 interface ExploreScreenProps {
   navigation: any;
@@ -81,10 +84,20 @@ export default function ExploreScreen({ navigation }: ExploreScreenProps) {
   const [userName, setUserName] = useState('Traveler');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [hotels, setHotels] = useState<Hotel[]>([]);
+  const [loadingHotels, setLoadingHotels] = useState(false);
 
   useEffect(() => {
     loadUser();
   }, []);
+
+  useEffect(() => {
+    if (selectedCategory === 'hotels') {
+      loadHotels();
+    } else {
+      setHotels([]);
+    }
+  }, [selectedCategory]);
 
   const loadUser = async () => {
     try {
@@ -98,13 +111,38 @@ export default function ExploreScreen({ navigation }: ExploreScreenProps) {
     }
   };
 
+  const loadHotels = async () => {
+    setLoadingHotels(true);
+    try {
+      const popularHotels = await hotelService.getPopularHotels();
+      setHotels(popularHotels);
+    } catch (error) {
+      console.error('Error loading hotels:', error);
+      // On error, set empty array so UI doesn't break
+      setHotels([]);
+    } finally {
+      setLoadingHotels(false);
+    }
+  };
+
   const filteredDestinations = POPULAR_DESTINATIONS.filter((dest) =>
     dest.destination.toLowerCase().includes(searchQuery.toLowerCase()) ||
     dest.country.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const filteredHotels = hotels.filter((hotel) =>
+    hotel.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    hotel.city.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    hotel.country.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   const handleDestinationPress = (destination: any) => {
     navigation.navigate('CreateTrip', { destination: destination.destination });
+  };
+
+  const handleHotelPress = (hotel: Hotel) => {
+    // Navigate to create trip with hotel location
+    navigation.navigate('CreateTrip', { destination: hotel.city || hotel.address });
   };
 
   return (
@@ -157,29 +195,69 @@ export default function ExploreScreen({ navigation }: ExploreScreenProps) {
           ))}
         </ScrollView>
 
-        {/* Popular Destinations */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Popular Destinations</Text>
-            <TouchableOpacity>
-              <Text style={styles.seeAll}>See all</Text>
-            </TouchableOpacity>
-          </View>
+        {/* Content based on selected category */}
+        {selectedCategory === 'hotels' ? (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Hotels</Text>
+              <TouchableOpacity>
+                <Text style={styles.seeAll}>See all</Text>
+              </TouchableOpacity>
+            </View>
 
-          <View style={styles.grid}>
-            {filteredDestinations.map((destination) => (
-              <DestinationCard
-                key={destination.id}
-                destination={destination.destination}
-                country={destination.country}
-                price={destination.price}
-                rating={destination.rating}
-                imageUrl={destination.imageUrl}
-                onPress={() => handleDestinationPress(destination)}
-              />
-            ))}
+            {loadingHotels ? (
+              <View style={styles.loadingContainer}>
+                <LoadingSpinner size="large" message="Loading hotels..." />
+              </View>
+            ) : filteredHotels.length > 0 ? (
+              <View style={styles.grid}>
+                {filteredHotels.map((hotel) => (
+                  <HotelCard
+                    key={hotel.id}
+                    name={hotel.name}
+                    address={hotel.address}
+                    city={hotel.city}
+                    country={hotel.country}
+                    price={hotel.price}
+                    rating={hotel.rating}
+                    imageUrl={hotel.imageUrl}
+                    onPress={() => handleHotelPress(hotel)}
+                  />
+                ))}
+              </View>
+            ) : (
+              <View style={styles.emptyContainer}>
+                <Text style={styles.emptyText}>No hotels found</Text>
+                <Text style={styles.emptySubtext}>
+                  Try searching for a different location
+                </Text>
+              </View>
+            )}
           </View>
-        </View>
+        ) : (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Popular Destinations</Text>
+              <TouchableOpacity>
+                <Text style={styles.seeAll}>See all</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.grid}>
+              {filteredDestinations.map((destination) => (
+                <DestinationCard
+                  key={destination.id}
+                  destination={destination.destination}
+                  country={destination.country}
+                  price={destination.price}
+                  rating={destination.rating}
+                  imageUrl={destination.imageUrl}
+                  onPress={() => handleDestinationPress(destination)}
+                />
+              ))}
+            </View>
+          </View>
+        )}
 
         {/* Featured Banner */}
         <TouchableOpacity
@@ -315,6 +393,25 @@ const styles = StyleSheet.create({
   },
   bottomSpacing: {
     height: spacing.xl,
+  },
+  loadingContainer: {
+    paddingVertical: spacing.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyContainer: {
+    paddingVertical: spacing.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyText: {
+    ...typography.h4,
+    color: colors.textSecondary,
+    marginBottom: spacing.xs,
+  },
+  emptySubtext: {
+    ...typography.body2,
+    color: colors.textSecondary,
   },
 });
 
