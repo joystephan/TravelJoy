@@ -13,3 +13,4 @@ router.get("/popular", hotelController.getPopularHotels.bind(hotelController));
 
 export default router;
 
+

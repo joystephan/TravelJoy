@@ -62,7 +62,7 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
           <View style={styles.header}>
             <Text style={styles.logo}>✈️</Text>
             <Text style={styles.appName}>TravelJoy</Text>
-            <Text style={styles.tagline}>Your AI Travel Companion</Text>
+            <Text style={styles.tagline}>Plan Your Perfect Journey</Text>
           </View>
 
           {/* Welcome Message */}

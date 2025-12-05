@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,11 +8,13 @@ import {
   Dimensions,
 } from 'react-native';
 import { colors, spacing, borderRadius, shadows, typography } from '../theme';
+import { useWishlist } from '../contexts/WishlistContext';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = (width - spacing.md * 3) / 2;
 
 interface DestinationCardProps {
+  id?: string;
   destination: string;
   country: string;
   price: number;
@@ -22,6 +24,7 @@ interface DestinationCardProps {
 }
 
 export default function DestinationCard({
+  id,
   destination,
   country,
   price,
@@ -30,6 +33,37 @@ export default function DestinationCard({
   onPress,
 }: DestinationCardProps) {
   const defaultImage = 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=400';
+  const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
+  const [isWishlisted, setIsWishlisted] = useState(false);
+
+  // Generate ID if not provided (for backward compatibility)
+  const itemId = id || `${destination}-${country}`.toLowerCase().replace(/\s+/g, '-');
+
+  useEffect(() => {
+    setIsWishlisted(isInWishlist(itemId));
+  }, [itemId, isInWishlist]);
+
+  const handleHeartPress = async (e: any) => {
+    e.stopPropagation();
+    try {
+      if (isWishlisted) {
+        await removeFromWishlist(itemId);
+        setIsWishlisted(false);
+      } else {
+        await addToWishlist({
+          id: itemId,
+          destination,
+          country,
+          price,
+          rating,
+          imageUrl,
+        });
+        setIsWishlisted(true);
+      }
+    } catch (error) {
+      console.error('Failed to toggle wishlist:', error);
+    }
+  };
 
   return (
     <TouchableOpacity
@@ -42,6 +76,16 @@ export default function DestinationCard({
         style={styles.image}
         resizeMode="cover"
       />
+      
+      {/* Heart Icon - Wishlist Button */}
+      <TouchableOpacity
+        style={styles.heartButton}
+        onPress={handleHeartPress}
+      >
+        <Text style={styles.heartIcon}>
+          {isWishlisted ? '❤️' : '🤍'}
+        </Text>
+      </TouchableOpacity>
       
       {/* Rating Badge */}
       <View style={styles.ratingBadge}>
@@ -100,6 +144,15 @@ const styles = StyleSheet.create({
     ...typography.caption,
     fontWeight: '600',
     color: colors.textPrimary,
+  },
+  heartButton: {
+    position: 'absolute',
+    top: spacing.sm,
+    left: spacing.sm,
+    padding: 4,
+  },
+  heartIcon: {
+    fontSize: 12,
   },
   content: {
     padding: spacing.sm,

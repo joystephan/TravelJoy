@@ -1,6 +1,8 @@
-import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import React, { useState } from "react";
+import { View, Text, StyleSheet, TouchableOpacity, Linking, Platform } from "react-native";
 import { Activity } from "../types";
+import { colors, typography, borderRadius, spacing } from "../theme";
+import LocationMapModal from "./LocationMapModal";
 
 interface ActivityCardProps {
   activity: Activity;
@@ -13,107 +15,191 @@ export default function ActivityCard({
   onEdit,
   onDelete,
 }: ActivityCardProps) {
+  const [mapModalVisible, setMapModalVisible] = useState(false);
+
+  const openMapModal = () => {
+    setMapModalVisible(true);
+  };
+
+  const closeMapModal = () => {
+    setMapModalVisible(false);
+  };
+
+  const getDirections = () => {
+    const { latitude, longitude } = activity;
+    
+    // Close the modal first
+    closeMapModal();
+    
+    // Use proper URL schemes that start navigation
+    const url = Platform.select({
+      ios: `http://maps.apple.com/?daddr=${latitude},${longitude}&dirflg=d`,
+      android: `google.navigation:q=${latitude},${longitude}`,
+    });
+
+    if (url) {
+      Linking.canOpenURL(url).then((supported) => {
+        if (supported) {
+          Linking.openURL(url);
+        } else {
+          // Fallback to web maps
+          const webUrl = `https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}`;
+          Linking.openURL(webUrl);
+        }
+      }).catch(() => {
+        // Fallback to web maps
+        const webUrl = `https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}`;
+        Linking.openURL(webUrl);
+      });
+    } else {
+      // Fallback to web maps
+      const webUrl = `https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}`;
+      Linking.openURL(webUrl);
+    }
+  };
+
   return (
-    <View style={styles.card}>
-      <View style={styles.content}>
-        <Text style={styles.name}>{activity.name}</Text>
-        {activity.description && (
-          <Text style={styles.description}>{activity.description}</Text>
-        )}
-        <View style={styles.details}>
-          <Text style={styles.category}>{activity.category}</Text>
-          <Text style={styles.duration}>{activity.duration} min</Text>
-          <Text style={styles.cost}>${activity.cost.toFixed(2)}</Text>
+    <>
+      <View style={styles.card}>
+        <View style={styles.content}>
+          <View style={styles.nameRow}>
+            <Text style={styles.name}>{activity.name}</Text>
+            <TouchableOpacity
+              style={styles.mapIconButton}
+              onPress={openMapModal}
+            >
+              <Text style={styles.mapIcon}>📍</Text>
+            </TouchableOpacity>
+          </View>
+          {activity.description && (
+            <Text style={styles.description}>{activity.description}</Text>
+          )}
+          <View style={styles.details}>
+            <Text style={styles.category}>{activity.category}</Text>
+            <Text style={styles.duration}>{activity.duration} min</Text>
+            <Text style={styles.cost}>${activity.cost.toFixed(2)}</Text>
+          </View>
+          {activity.rating && (
+            <Text style={styles.rating}>⭐ {activity.rating.toFixed(1)}</Text>
+          )}
         </View>
-        {activity.rating && (
-          <Text style={styles.rating}>⭐ {activity.rating.toFixed(1)}</Text>
-        )}
+        <View style={styles.actions}>
+          <TouchableOpacity style={styles.editButton} onPress={onEdit}>
+            <Text style={styles.editButtonText}>Edit</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.deleteButton} onPress={onDelete}>
+            <Text style={styles.deleteButtonText}>Delete</Text>
+          </TouchableOpacity>
+        </View>
       </View>
-      <View style={styles.actions}>
-        <TouchableOpacity style={styles.editButton} onPress={onEdit}>
-          <Text style={styles.editButtonText}>Edit</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.deleteButton} onPress={onDelete}>
-          <Text style={styles.deleteButtonText}>Delete</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+
+      <LocationMapModal
+        visible={mapModalVisible}
+        onClose={closeMapModal}
+        location={{
+          latitude: activity.latitude,
+          longitude: activity.longitude,
+          name: activity.name,
+        }}
+        onGetDirections={getDirections}
+      />
+    </>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: "#fff",
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 12,
+    backgroundColor: colors.white,
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    marginBottom: spacing.md,
     borderWidth: 1,
-    borderColor: "#e0e0e0",
+    borderColor: colors.gray200,
   },
   content: {
-    marginBottom: 12,
+    marginBottom: spacing.sm,
+  },
+  nameRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: spacing.xs,
   },
   name: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#333",
-    marginBottom: 4,
+    ...typography.h4,
+    color: colors.textPrimary,
+    flex: 1,
+  },
+  mapIconButton: {
+    padding: spacing.xs,
+    marginLeft: spacing.sm,
+  },
+  mapIcon: {
+    fontSize: 20,
   },
   description: {
-    fontSize: 14,
-    color: "#666",
-    marginBottom: 8,
+    ...typography.body2,
+    color: colors.textSecondary,
+    marginBottom: spacing.sm,
   },
   details: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    gap: spacing.md,
   },
   category: {
-    fontSize: 14,
-    color: "#007AFF",
+    ...typography.body2,
+    color: colors.primary,
     textTransform: "capitalize",
+    fontWeight: "600",
   },
   duration: {
-    fontSize: 14,
-    color: "#666",
+    ...typography.body2,
+    color: colors.textSecondary,
   },
   cost: {
-    fontSize: 14,
+    ...typography.body2,
     fontWeight: "600",
-    color: "#34C759",
+    color: colors.success,
   },
   rating: {
-    fontSize: 14,
-    color: "#FF9500",
-    marginTop: 4,
+    ...typography.body2,
+    color: colors.warning,
+    marginTop: spacing.xs,
   },
   actions: {
     flexDirection: "row",
-    gap: 8,
+    gap: spacing.xs,
+    justifyContent: "flex-start",
   },
   editButton: {
-    flex: 1,
-    backgroundColor: "#007AFF",
-    borderRadius: 6,
-    padding: 8,
+    backgroundColor: colors.primary,
+    borderRadius: borderRadius.md,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.md,
     alignItems: "center",
+    justifyContent: "center",
+    minHeight: 32,
   },
   editButtonText: {
-    color: "#fff",
-    fontSize: 14,
+    ...typography.button,
+    color: colors.white,
+    fontSize: 13,
     fontWeight: "600",
   },
   deleteButton: {
-    flex: 1,
-    backgroundColor: "#FF3B30",
-    borderRadius: 6,
-    padding: 8,
+    backgroundColor: "#AF363C",
+    borderRadius: borderRadius.md,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.md,
     alignItems: "center",
+    justifyContent: "center",
+    minHeight: 32,
   },
   deleteButtonText: {
-    color: "#fff",
-    fontSize: 14,
+    ...typography.button,
+    color: colors.white,
+    fontSize: 13,
     fontWeight: "600",
   },
 });

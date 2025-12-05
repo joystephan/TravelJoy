@@ -6,10 +6,13 @@ import {
   FlatList,
   TouchableOpacity,
   RefreshControl,
+  SafeAreaView,
+  StatusBar,
 } from "react-native";
 import { tripService } from "../services/tripService";
 import { Trip } from "../types";
 import LoadingSpinner from "../components/LoadingSpinner";
+import { colors, spacing, borderRadius, shadows, typography } from "../theme";
 
 export default function TripHistoryScreen({ navigation }: any) {
   const [trips, setTrips] = useState<Trip[]>([]);
@@ -96,7 +99,8 @@ export default function TripHistoryScreen({ navigation }: any) {
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
       {trips.length === 0 ? (
         <View style={styles.emptyState}>
           <Text style={styles.emptyIcon}>✈️</Text>
@@ -117,107 +121,104 @@ export default function TripHistoryScreen({ navigation }: any) {
           renderItem={renderTripCard}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContent}
+          style={styles.list}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
           }
         />
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
-    backgroundColor: "#f5f5f5",
+    backgroundColor: colors.background,
+  },
+  list: {
+    flex: 1,
   },
   listContent: {
-    padding: 16,
+    padding: spacing.md,
+    paddingBottom: 120, // Extra spacing to prevent overlap with tab bar
   },
   tripCard: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: "#e0e0e0",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    backgroundColor: colors.white,
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    ...shadows.sm,
   },
   tripHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 12,
+    marginBottom: spacing.sm,
   },
   destination: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#333",
+    ...typography.h3,
+    color: colors.textPrimary,
     flex: 1,
   },
   statusBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.full,
   },
   statusText: {
-    fontSize: 12,
+    ...typography.caption,
     fontWeight: "600",
-    color: "#fff",
+    color: colors.white,
     textTransform: "capitalize",
   },
   tripDetails: {
-    marginBottom: 8,
+    marginBottom: spacing.xs,
   },
   dates: {
-    fontSize: 14,
-    color: "#666",
-    marginBottom: 4,
+    ...typography.body2,
+    color: colors.textSecondary,
+    marginBottom: spacing.xs,
   },
   budget: {
-    fontSize: 14,
-    color: "#666",
+    ...typography.body2,
+    color: colors.textSecondary,
   },
   createdAt: {
-    fontSize: 12,
-    color: "#999",
-    marginTop: 4,
+    ...typography.caption,
+    color: colors.textLight,
+    marginTop: spacing.xs,
   },
   emptyState: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    padding: 32,
+    padding: spacing.xl,
   },
   emptyIcon: {
     fontSize: 64,
-    marginBottom: 16,
+    marginBottom: spacing.md,
   },
   emptyTitle: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#333",
-    marginBottom: 8,
+    ...typography.h2,
+    color: colors.textPrimary,
+    marginBottom: spacing.sm,
   },
   emptyText: {
-    fontSize: 16,
-    color: "#666",
+    ...typography.body1,
+    color: colors.textSecondary,
     textAlign: "center",
-    marginBottom: 24,
+    marginBottom: spacing.lg,
   },
   createButton: {
-    backgroundColor: "#007AFF",
-    paddingHorizontal: 32,
-    paddingVertical: 14,
-    borderRadius: 8,
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.lg,
+    ...shadows.md,
   },
   createButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#fff",
+    ...typography.button,
+    color: colors.white,
   },
 });

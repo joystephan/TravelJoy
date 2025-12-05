@@ -50,7 +50,7 @@ const SCHEDULE_PREFERENCES = [
   { id: "packed", label: "Packed", description: "Maximum activities per day" },
 ];
 
-export default function TrncesScreen({ navigation }: any) {
+export default function TravelPreferencesScreen({ navigation }: any) {
   const { user, updatePreferences } = useAuth();
   const [loading, setLoading] = useState(false);
   const [activityTypes, setActivityTypes] = useState<string[]>([]);

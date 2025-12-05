@@ -49,7 +49,7 @@ class TripService {
       return offlineTrip;
     }
 
-    const response = await api.post("/trips", {
+    const response = await api.post("/api/trips", {
       ...tripData,
       preferences: {
         activityType: tripData.preferences?.activityType || [],
@@ -60,7 +60,8 @@ class TripService {
       },
     });
 
-    const trip = response.data;
+    // Backend returns { message, trip }, so we need to extract the trip
+    const trip = response.data.trip || response.data;
     await saveTripOffline(trip);
     return trip;
   }
@@ -75,8 +76,9 @@ class TripService {
       return trip;
     }
 
-    const response = await api.get(`/trips/${tripId}`);
-    const trip = response.data;
+    const response = await api.get(`/api/trips/${tripId}`);
+    // Backend returns { trip }, so we need to extract the trip
+    const trip = response.data.trip || response.data;
     await saveTripOffline(trip);
     return trip;
   }
@@ -87,8 +89,9 @@ class TripService {
     }
 
     try {
-      const response = await api.get("/trips");
-      const trips = response.data;
+      const response = await api.get("/api/trips");
+      // Backend returns { trips }, so we need to extract the trips array
+      const trips = response.data.trips || response.data;
 
       // Update offline storage
       for (const trip of trips) {
@@ -118,7 +121,7 @@ class TripService {
       return { id: activityId, ...updates };
     }
 
-    const response = await api.put(`/activities/${activityId}`, updates);
+    const response = await api.put(`/api/trips/activities/${activityId}`, updates);
     return response.data;
   }
 
@@ -131,7 +134,7 @@ class TripService {
       return;
     }
 
-    await api.delete(`/activities/${activityId}`);
+    await api.delete(`/api/trips/activities/${activityId}`);
   }
 
   async replaceActivity(
@@ -143,7 +146,7 @@ class TripService {
     }
 
     const response = await api.post(
-      `/activities/${activityId}/replace`,
+      `/api/trips/activities/${activityId}/replace`,
       newActivity
     );
     return response.data;
@@ -160,7 +163,7 @@ class TripService {
       throw new Error("Cannot optimize trips while offline");
     }
 
-    const response = await api.post(`/trips/${tripId}/optimize`, constraints);
+    const response = await api.post(`/api/trips/${tripId}/optimize`, constraints);
     const trip = response.data;
     await saveTripOffline(trip);
     return trip;
@@ -176,7 +179,7 @@ class TripService {
       return;
     }
 
-    await api.delete(`/trips/${tripId}`);
+    await api.delete(`/api/trips/${tripId}`);
     await deleteTripOffline(tripId);
   }
 }
