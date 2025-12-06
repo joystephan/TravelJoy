@@ -11,11 +11,6 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { useAuth } from "../contexts/AuthContext";
 
 // Lazy load screens for better performance
-const SubscriptionScreen = lazy(() => import("../screens/SubscriptionScreen"));
-const PaymentScreen = lazy(() => import("../screens/PaymentScreen"));
-const ManageSubscriptionScreen = lazy(
-  () => import("../screens/ManageSubscriptionScreen")
-);
 const TripCreationScreen = lazy(() => import("../screens/TripCreationScreen"));
 const TripDetailScreen = lazy(() => import("../screens/TripDetailScreen"));
 const EditActivityScreen = lazy(() => import("../screens/EditActivityScreen"));
@@ -25,7 +20,6 @@ const TravelPreferencesScreen = lazy(
 );
 const TripHistoryScreen = lazy(() => import("../screens/TripHistoryScreen"));
 const ExploreScreen = lazy(() => import("../screens/ExploreScreen"));
-const SubscriptionGate = lazy(() => import("../components/SubscriptionGate"));
 
 // Loading fallback component
 const LoadingFallback = () => (
@@ -61,13 +55,6 @@ function HomeScreen({ navigation }: any) {
         onPress={() => navigation.navigate("CreateTrip")}
       >
         <Text style={styles.createTripButtonText}>Create New Trip</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={styles.subscriptionButton}
-        onPress={() => navigation.navigate("Subscription")}
-      >
-        <Text style={styles.subscriptionButtonText}>View Subscriptions</Text>
       </TouchableOpacity>
 
       <TouchableOpacity style={styles.button} onPress={logout}>
@@ -127,20 +114,6 @@ function MainTabs() {
   );
 }
 
-// Wrapper for CreateTrip with subscription gate
-const CreateTripWithGate = withSuspense(
-  lazy(() =>
-    Promise.resolve({
-      default: ({ navigation }: any) => (
-        <Suspense fallback={<LoadingFallback />}>
-          <SubscriptionGate navigation={navigation} feature="trip creation">
-            <TripCreationScreen navigation={navigation} />
-          </SubscriptionGate>
-        </Suspense>
-      ),
-    })
-  )
-);
 
 export default function AppNavigator() {
   return (
@@ -157,7 +130,7 @@ export default function AppNavigator() {
       />
       <Stack.Screen
         name="CreateTrip"
-        component={CreateTripWithGate}
+        component={withSuspense(TripCreationScreen)}
         options={{ title: "Create Trip" }}
       />
       <Stack.Screen
@@ -169,21 +142,6 @@ export default function AppNavigator() {
         name="EditActivity"
         component={withSuspense(EditActivityScreen)}
         options={{ title: "Edit Activity" }}
-      />
-      <Stack.Screen
-        name="Subscription"
-        component={withSuspense(SubscriptionScreen)}
-        options={{ title: "Choose Your Plan" }}
-      />
-      <Stack.Screen
-        name="Payment"
-        component={withSuspense(PaymentScreen)}
-        options={{ title: "Payment" }}
-      />
-      <Stack.Screen
-        name="ManageSubscription"
-        component={withSuspense(ManageSubscriptionScreen)}
-        options={{ title: "Manage Subscription" }}
       />
       <Stack.Screen
         name="TravelPreferences"
@@ -221,18 +179,6 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   createTripButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  subscriptionButton: {
-    backgroundColor: "#007AFF",
-    borderRadius: 8,
-    padding: 16,
-    paddingHorizontal: 32,
-    marginBottom: 12,
-  },
-  subscriptionButtonText: {
     color: "#fff",
     fontSize: 16,
     fontWeight: "600",

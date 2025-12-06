@@ -39,11 +39,6 @@ const FAQ_ITEMS = [
     answer:
       "Go to Settings > Travel Preferences to customize your activity types, food preferences, transport preferences, and schedule style.",
   },
-  {
-    question: "What subscription plans are available?",
-    answer:
-      "We offer Free, Basic, and Premium plans. Check the Subscription screen to see features and pricing for each plan.",
-  },
 ];
 
 export default function HelpFAQScreen({ navigation }: HelpFAQScreenProps) {

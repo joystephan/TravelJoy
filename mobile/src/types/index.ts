@@ -4,16 +4,6 @@ export interface User {
   firstName?: string;
   lastName?: string;
   tripsThisMonth: number;
-  subscription?: Subscription;
-}
-
-export interface Subscription {
-  id: string;
-  planId: string;
-  status: string;
-  currentPeriodStart: Date;
-  currentPeriodEnd: Date;
-  cancelAtPeriodEnd: boolean;
 }
 
 export interface Trip {

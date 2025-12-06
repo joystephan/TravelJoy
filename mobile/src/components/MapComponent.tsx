@@ -39,28 +39,6 @@ export default function MapComponent({
 
   const mapRef = useRef<MapView>(null);
 
-  // Debug: Log locations
-  useEffect(() => {
-    console.log("MapComponent - Locations:", {
-      total: locations.length,
-      valid: validLocations.length,
-      locations: locations.map(loc => ({
-        name: loc.name,
-        lat: loc.latitude,
-        lon: loc.longitude
-      }))
-    });
-  }, [locations, validLocations]);
-
-  // Animate to region when locations change
-  useEffect(() => {
-    if (validLocations.length > 0 && mapRef.current) {
-      const region = defaultRegion;
-      console.log("MapComponent - Animating to region:", region);
-      mapRef.current.animateToRegion(region, 1000);
-    }
-  }, [validLocations, defaultRegion]);
-
   // Calculate default region from locations if not provided
   const defaultRegion = React.useMemo(() => {
     if (initialRegion) return initialRegion;
@@ -104,6 +82,28 @@ export default function MapComponent({
       longitudeDelta: Math.max(lngDelta, 0.01),
     };
   }, [validLocations, initialRegion]);
+
+  // Debug: Log locations
+  useEffect(() => {
+    console.log("MapComponent - Locations:", {
+      total: locations.length,
+      valid: validLocations.length,
+      locations: locations.map(loc => ({
+        name: loc.name,
+        lat: loc.latitude,
+        lon: loc.longitude
+      }))
+    });
+  }, [locations, validLocations]);
+
+  // Animate to region when locations change
+  useEffect(() => {
+    if (validLocations.length > 0 && mapRef.current) {
+      const region = defaultRegion;
+      console.log("MapComponent - Animating to region:", region);
+      mapRef.current.animateToRegion(region, 1000);
+    }
+  }, [validLocations, defaultRegion]);
 
   return (
     <View style={[styles.container, style]}>

@@ -1,6 +1,5 @@
 export { default as ActivityCard } from "./ActivityCard";
 export { default as WeatherWidget } from "./WeatherWidget";
-export { default as SubscriptionGate } from "./SubscriptionGate";
 export { default as MapComponent } from "./MapComponent";
 export { default as LoadingSpinner } from "./LoadingSpinner";
 export { default as ErrorBoundary } from "./ErrorBoundary";

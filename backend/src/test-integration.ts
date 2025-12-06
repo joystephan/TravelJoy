@@ -106,51 +106,6 @@ class IntegrationTester {
     }
   }
 
-  async testSubscriptionFlow(): Promise<boolean> {
-    try {
-      // Get available subscription plans
-      const plansResponse = await this.api.get("/api/subscription/plans");
-
-      if (!plansResponse.data || plansResponse.data.length === 0) {
-        this.addResult(
-          "Subscription Flow",
-          false,
-          "No subscription plans available"
-        );
-        return false;
-      }
-
-      this.addResult(
-        "Subscription Flow - Get Plans",
-        true,
-        `Found ${plansResponse.data.length} plans`,
-        {
-          plans: plansResponse.data.map((p: any) => p.name),
-        }
-      );
-
-      // Check subscription status
-      const statusResponse = await this.api.get("/api/subscription/status");
-      this.addResult(
-        "Subscription Flow - Check Status",
-        true,
-        "Status retrieved",
-        {
-          status: statusResponse.data,
-        }
-      );
-
-      return true;
-    } catch (error: any) {
-      this.addResult(
-        "Subscription Flow",
-        false,
-        `Failed: ${error.response?.data?.error || error.message}`
-      );
-      return false;
-    }
-  }
-
   async testTripCreation(): Promise<boolean> {
     try {
       const tripData = {
@@ -306,19 +261,16 @@ class IntegrationTester {
     // Test 3: User Login (skipped if registration successful)
     await this.testUserLogin();
 
-    // Test 4: Subscription Flow
-    await this.testSubscriptionFlow();
-
-    // Test 5: Trip Creation
+    // Test 4: Trip Creation
     await this.testTripCreation();
 
-    // Test 6: Itinerary Generation
+    // Test 5: Itinerary Generation
     await this.testItineraryGeneration();
 
-    // Test 7: Trip Retrieval
+    // Test 6: Trip Retrieval
     await this.testTripRetrieval();
 
-    // Test 8: Chat Assistant
+    // Test 7: Chat Assistant
     await this.testChatAssistant();
 
     // Summary

@@ -28,7 +28,7 @@ class HotelService {
    */
   async searchHotels(location: string, limit: number = 20): Promise<Hotel[]> {
     try {
-      const response = await api.get<HotelSearchResponse>("/hotels/search", {
+      const response = await api.get<HotelSearchResponse>("/api/hotels/search", {
         params: { location, limit },
       });
       return response.data.data;
@@ -44,7 +44,7 @@ class HotelService {
    */
   async getPopularHotels(): Promise<Hotel[]> {
     try {
-      const response = await api.get<HotelSearchResponse>("/hotels/popular");
+      const response = await api.get<HotelSearchResponse>("/api/hotels/popular");
       return response.data.data;
     } catch (error: any) {
       // Hotel endpoint may not be available - silently return sample data

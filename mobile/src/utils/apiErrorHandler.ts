@@ -52,9 +52,6 @@ export function getUserFriendlyMessage(error: APIError): string {
     RATE_LIMIT_EXCEEDED:
       "Too many requests. Please wait a moment and try again.",
     EXTERNAL_API_ERROR: "Unable to fetch travel data. Please try again later.",
-    SUBSCRIPTION_REQUIRED: "This feature requires an active subscription.",
-    TRIP_LIMIT_EXCEEDED:
-      "You've reached your monthly trip limit. Upgrade to create more trips.",
   };
 
   return (
