@@ -32,19 +32,13 @@ class TripService {
    * Create a new trip with AI-generated itinerary
    */
   async createTrip(tripData: TripInput) {
-    // Validate user subscription and trip limits
+    // Validate user exists
     const user = await prisma.user.findUnique({
       where: { id: tripData.userId },
-      include: { subscription: true },
     });
 
     if (!user) {
       throw new Error("User not found");
-    }
-
-    // Check trip limits based on subscription
-    if (!user.subscription || user.subscription.status !== "active") {
-      throw new Error("Active subscription required to create trips");
     }
 
     // Create trip record
@@ -59,14 +53,18 @@ class TripService {
       },
     });
 
-    // Generate itinerary asynchronously
-    this.generateItineraryForTrip(trip.id, tripData).catch((error) => {
+    // Generate itinerary asynchronously (don't block the response)
+    this.generateItineraryForTrip(trip.id, tripData).catch(async (error) => {
       console.error(`Failed to generate itinerary for trip ${trip.id}:`, error);
       // Update trip status to failed
-      prisma.trip.update({
-        where: { id: trip.id },
-        data: { status: "failed" },
-      });
+      try {
+        await prisma.trip.update({
+          where: { id: trip.id },
+          data: { status: "failed" },
+        });
+      } catch (updateError) {
+        console.error(`Failed to update trip status to failed:`, updateError);
+      }
     });
 
     return trip;

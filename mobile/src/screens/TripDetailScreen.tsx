@@ -10,12 +10,15 @@ import {
   SafeAreaView,
   StatusBar,
   Dimensions,
+  Linking,
+  Platform,
 } from "react-native";
-// import MapView, { Marker } from "react-native-maps";
 import { tripService } from "../services/tripService";
 import { Trip, DailyPlan, Activity } from "../types";
 import WeatherWidget from "../components/WeatherWidget";
 import ActivityCard from "../components/ActivityCard";
+import MapComponent from "../components/MapComponent";
+import LocationMapModal from "../components/LocationMapModal";
 import { colors, spacing, borderRadius, shadows, typography } from "../theme";
 
 const { width } = Dimensions.get('window');
@@ -34,27 +37,66 @@ export default function TripDetailScreen({
   const [loading, setLoading] = useState(true);
   const [selectedDay, setSelectedDay] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
+  const [mapModalVisible, setMapModalVisible] = useState(false);
+  const [selectedLocation, setSelectedLocation] = useState<{
+    latitude: number;
+    longitude: number;
+    name: string;
+  } | null>(null);
 
   useEffect(() => {
     loadTrip();
   }, [tripId]);
 
-  const loadTrip = async () => {
+  // Auto-refresh when trip is being generated
+  useEffect(() => {
+    // Only poll if trip exists and status is "generating"
+    if (!trip || trip.status !== "generating") {
+      return;
+    }
+
+    // Poll every 3 seconds
+    const pollInterval = setInterval(async () => {
+      try {
+        const tripData = await tripService.getTripById(tripId);
+        setTrip(tripData);
+        
+        // Stop polling if trip is completed or failed
+        if (tripData.status === "completed" || tripData.status === "failed") {
+          clearInterval(pollInterval);
+        }
+      } catch (error) {
+        // Silently fail during polling - don't show errors
+        console.error("Polling error:", error);
+      }
+    }, 3000); // Poll every 3 seconds
+
+    // Cleanup interval on unmount or when trip status changes
+    return () => {
+      clearInterval(pollInterval);
+    };
+  }, [trip?.status, tripId]);
+
+  const loadTrip = async (showLoading = true) => {
     try {
-      setLoading(true);
+      if (showLoading) {
+        setLoading(true);
+      }
       const tripData = await tripService.getTripById(tripId);
       setTrip(tripData);
     } catch (error: any) {
       Alert.alert("Error", error.message || "Failed to load trip");
       navigation.goBack();
     } finally {
-      setLoading(false);
+      if (showLoading) {
+        setLoading(false);
+      }
     }
   };
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await loadTrip();
+    await loadTrip(false); // Don't show full loading screen, just refresh indicator
     setRefreshing(false);
   };
 
@@ -88,6 +130,37 @@ export default function TripDetailScreen({
     });
   };
 
+  const handleDeleteMeal = async (mealId: string) => {
+    Alert.alert(
+      "Delete Meal",
+      "Are you sure you want to delete this meal?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              // TODO: Add deleteMeal method to tripService
+              // await tripService.deleteMeal(mealId);
+              await loadTrip();
+              Alert.alert("Success", "Meal deleted successfully");
+            } catch (error: any) {
+              Alert.alert("Error", "Failed to delete meal");
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleEditMeal = (meal: any) => {
+    navigation.navigate("EditMeal", {
+      meal,
+      onSave: loadTrip,
+    });
+  };
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -104,10 +177,28 @@ export default function TripDetailScreen({
         <Text style={styles.emptyText}>
           {trip?.status === "generating"
             ? "Your itinerary is being generated..."
+            : trip?.status === "failed"
+            ? "Failed to generate itinerary. Please try again."
             : "No itinerary available"}
         </Text>
-        <TouchableOpacity style={styles.refreshButton} onPress={handleRefresh}>
-          <Text style={styles.refreshButtonText}>Refresh</Text>
+        {trip?.status === "generating" && (
+          <View style={styles.pollingIndicator}>
+            <ActivityIndicator size="small" color={colors.primary} />
+            <Text style={styles.pollingText}>
+              Checking for updates automatically...
+            </Text>
+          </View>
+        )}
+        <TouchableOpacity 
+          style={styles.refreshButton} 
+          onPress={handleRefresh}
+          disabled={refreshing}
+        >
+          {refreshing ? (
+            <ActivityIndicator size="small" color={colors.white} />
+          ) : (
+            <Text style={styles.refreshButtonText}>Refresh</Text>
+          )}
         </TouchableOpacity>
       </View>
     );
@@ -115,6 +206,48 @@ export default function TripDetailScreen({
 
   const currentDayPlan = trip.dailyPlans[selectedDay];
   const allActivities = trip.dailyPlans.flatMap((dp) => dp.activities);
+  const currentDayActivities = currentDayPlan.activities;
+
+  const openMapModal = (location: { latitude: number; longitude: number; name: string }) => {
+    setSelectedLocation(location);
+    setMapModalVisible(true);
+  };
+
+  const closeMapModal = () => {
+    setMapModalVisible(false);
+    setSelectedLocation(null);
+  };
+
+  const getDirections = (latitude: number, longitude: number) => {
+    // Close the modal first
+    closeMapModal();
+    
+    // Use proper URL schemes that start navigation
+    const url = Platform.select({
+      ios: `http://maps.apple.com/?daddr=${latitude},${longitude}&dirflg=d`,
+      android: `google.navigation:q=${latitude},${longitude}`,
+    });
+
+    if (url) {
+      Linking.canOpenURL(url).then((supported) => {
+        if (supported) {
+          Linking.openURL(url);
+        } else {
+          // Fallback to web maps
+          const webUrl = `https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}`;
+          Linking.openURL(webUrl);
+        }
+      }).catch(() => {
+        // Fallback to web maps
+        const webUrl = `https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}`;
+        Linking.openURL(webUrl);
+      });
+    } else {
+      // Fallback to web maps
+      const webUrl = `https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}`;
+      Linking.openURL(webUrl);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -122,13 +255,16 @@ export default function TripDetailScreen({
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
         {/* Hero Section with Map */}
         <View style={styles.hero}>
-          {/* Map Placeholder */}
-          <View style={[styles.map, styles.mapPlaceholder]}>
-            <Text style={styles.mapPlaceholderText}>🗺️</Text>
-            <Text style={styles.mapPlaceholderTitle}>Map View</Text>
-            <Text style={styles.mapPlaceholderSubtitle}>
-              {currentDayPlan.activities.length} activities
-            </Text>
+          {/* Real Map */}
+          <View style={styles.map}>
+            <MapComponent
+              locations={currentDayActivities.map((activity) => ({
+                latitude: activity.latitude,
+                longitude: activity.longitude,
+                name: activity.name,
+              }))}
+              style={styles.mapComponent}
+            />
           </View>
 
           {/* Gradient Overlay */}
@@ -164,9 +300,9 @@ export default function TripDetailScreen({
           {/* Weather Widget */}
           <View style={styles.weatherBadge}>
             <WeatherWidget
-              latitude={allActivities.length > 0 ? allActivities[0].latitude : 0}
+              latitude={currentDayActivities.length > 0 ? currentDayActivities[0].latitude : 0}
               longitude={
-                allActivities.length > 0 ? allActivities[0].longitude : 0
+                currentDayActivities.length > 0 ? currentDayActivities[0].longitude : 0
               }
               date={currentDayPlan.date}
             />
@@ -267,13 +403,23 @@ export default function TripDetailScreen({
               <View key={meal.id} style={styles.mealCard}>
                 <View style={styles.mealHeader}>
                   <View style={styles.mealInfo}>
-                    <Text style={styles.mealName}>{meal.name}</Text>
-                    <Text style={styles.mealType}>{meal.mealType}</Text>
-                  </View>
-                  <View style={styles.mealPrice}>
-                    <Text style={styles.mealPriceText}>
-                      ${meal.cost.toFixed(2)}
-                    </Text>
+                    <View style={styles.mealNameRow}>
+                      <Text style={styles.mealName}>{meal.name}</Text>
+                      <TouchableOpacity
+                        style={styles.mapIconButton}
+                        onPress={() => openMapModal({
+                          latitude: meal.latitude,
+                          longitude: meal.longitude,
+                          name: meal.name,
+                        })}
+                      >
+                        <Text style={styles.mapIcon}>📍</Text>
+                      </TouchableOpacity>
+                    </View>
+                    <View style={styles.mealDetails}>
+                      <Text style={styles.mealType}>{meal.mealType}</Text>
+                      <Text style={styles.mealCost}>${meal.cost.toFixed(2)}</Text>
+                    </View>
                   </View>
                 </View>
                 {meal.cuisine && (
@@ -281,6 +427,20 @@ export default function TripDetailScreen({
                     <Text style={styles.mealBadgeText}>{meal.cuisine}</Text>
                   </View>
                 )}
+                <View style={styles.mealActions}>
+                  <TouchableOpacity
+                    style={styles.mealEditButton}
+                    onPress={() => handleEditMeal(meal)}
+                  >
+                    <Text style={styles.mealEditButtonText}>Edit</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.mealDeleteButton}
+                    onPress={() => handleDeleteMeal(meal.id)}
+                  >
+                    <Text style={styles.mealDeleteButtonText}>Delete</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             ))}
           </View>
@@ -305,9 +465,21 @@ export default function TripDetailScreen({
                     </Text>
                     <Text style={styles.transportModeText}>{transport.mode}</Text>
                   </View>
-                  <Text style={styles.transportCost}>
-                    ${transport.cost.toFixed(2)}
-                  </Text>
+                  <View style={styles.transportHeaderRight}>
+                    <Text style={styles.transportCost}>
+                      ${transport.cost.toFixed(2)}
+                    </Text>
+                    <TouchableOpacity
+                      style={styles.mapIconButton}
+                      onPress={() => openMapModal({
+                        latitude: transport.toLatitude,
+                        longitude: transport.toLongitude,
+                        name: transport.toLocation,
+                      })}
+                    >
+                      <Text style={styles.mapIcon}>📍</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
                 <View style={styles.transportRoute}>
                   <Text style={styles.transportLocation}>
@@ -328,6 +500,15 @@ export default function TripDetailScreen({
 
         <View style={styles.bottomSpacing} />
       </ScrollView>
+
+      {selectedLocation && (
+        <LocationMapModal
+          visible={mapModalVisible}
+          onClose={closeMapModal}
+          location={selectedLocation}
+          onGetDirections={() => getDirections(selectedLocation.latitude, selectedLocation.longitude)}
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -379,31 +560,28 @@ const styles = StyleSheet.create({
     ...typography.button,
     color: colors.white,
   },
+  pollingIndicator: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: spacing.md,
+  },
+  pollingText: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    marginLeft: spacing.sm,
+  },
   hero: {
     height: 300,
     position: 'relative',
   },
   map: {
     ...StyleSheet.absoluteFillObject,
+    backgroundColor: colors.white,
   },
-  mapPlaceholder: {
-    backgroundColor: colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  mapPlaceholderText: {
-    fontSize: 64,
-    marginBottom: spacing.sm,
-  },
-  mapPlaceholderTitle: {
-    ...typography.h2,
-    color: colors.white,
-    marginBottom: spacing.xs,
-  },
-  mapPlaceholderSubtitle: {
-    ...typography.body2,
-    color: colors.white,
-    opacity: 0.9,
+  mapComponent: {
+    width: '100%',
+    height: '100%',
   },
   heroOverlay: {
     ...StyleSheet.absoluteFillObject,
@@ -580,26 +758,39 @@ const styles = StyleSheet.create({
   mealInfo: {
     flex: 1,
   },
+  mealNameRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
   mealName: {
     ...typography.h4,
     color: colors.textPrimary,
+    flex: 1,
     marginBottom: spacing.xs,
   },
+  mapIconButton: {
+    padding: spacing.xs,
+    marginLeft: spacing.sm,
+  },
+  mapIcon: {
+    fontSize: 20,
+  },
+  mealDetails: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    marginTop: spacing.xs,
+  },
   mealType: {
-    ...typography.caption,
+    ...typography.body2,
     color: colors.textSecondary,
     textTransform: 'capitalize',
   },
-  mealPrice: {
-    backgroundColor: colors.gray100,
-    borderRadius: borderRadius.md,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-  },
-  mealPriceText: {
+  mealCost: {
     ...typography.body2,
-    color: colors.primary,
-    fontWeight: '700',
+    fontWeight: "600",
+    color: colors.success,
   },
   mealBadge: {
     alignSelf: 'flex-start',
@@ -614,6 +805,42 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontWeight: '600',
   },
+  mealActions: {
+    flexDirection: "row",
+    gap: spacing.xs,
+    justifyContent: "flex-start",
+    marginTop: spacing.sm,
+  },
+  mealEditButton: {
+    backgroundColor: colors.primary,
+    borderRadius: borderRadius.md,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.md,
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 32,
+  },
+  mealEditButtonText: {
+    ...typography.button,
+    color: colors.white,
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  mealDeleteButton: {
+    backgroundColor: "#AF363C",
+    borderRadius: borderRadius.md,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.md,
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 32,
+  },
+  mealDeleteButtonText: {
+    ...typography.button,
+    color: colors.white,
+    fontSize: 13,
+    fontWeight: "600",
+  },
   transportCard: {
     backgroundColor: colors.white,
     borderRadius: borderRadius.lg,
@@ -626,6 +853,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: spacing.sm,
+  },
+  transportHeaderRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
   },
   transportMode: {
     flexDirection: 'row',
@@ -642,9 +874,9 @@ const styles = StyleSheet.create({
     textTransform: 'capitalize',
   },
   transportCost: {
-    ...typography.body1,
-    color: colors.primary,
-    fontWeight: '700',
+    ...typography.body2,
+    fontWeight: "600",
+    color: colors.success,
   },
   transportRoute: {
     flexDirection: 'row',

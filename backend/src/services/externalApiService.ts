@@ -1,6 +1,7 @@
 import nominatimService from "./nominatimService";
 import weatherService from "./weatherService";
 import countriesService from "./countriesService";
+import hotelService from "./hotelService";
 
 /**
  * Unified External API Service
@@ -94,6 +95,14 @@ class ExternalApiService {
 
   async getTravelInfo(countryCode: string) {
     return countriesService.getTravelInfo(countryCode);
+  }
+
+  /**
+   * Search for hotels in a location
+   * Uses Overpass API for detailed hotel data, falls back to Nominatim
+   */
+  async searchHotels(location: string, options?: { limit?: number }) {
+    return hotelService.searchHotels(location, options);
   }
 
   /**

@@ -15,9 +15,13 @@ class WeatherService {
         params: { latitude, longitude },
       });
       return response.data;
-    } catch (error) {
-      console.error("Weather service error:", error);
-      // Return default weather data if API fails
+    } catch (error: any) {
+      // Weather endpoint may not be available - silently return default data
+      // This is expected behavior as weather is optional
+      // Only log if it's not a 404 (expected) or network error
+      if (error?.response?.status !== 404) {
+        console.warn("Weather service unavailable:", error?.message);
+      }
       return {
         temperature: 20,
         condition: "Unknown",
@@ -36,8 +40,13 @@ class WeatherService {
         params: { latitude, longitude, days },
       });
       return response.data;
-    } catch (error) {
-      console.error("Weather forecast error:", error);
+    } catch (error: any) {
+      // Weather endpoint may not be available - silently return empty array
+      // This is expected behavior as weather is optional
+      // Only log if it's not a 404 (expected) or network error
+      if (error?.response?.status !== 404) {
+        console.warn("Weather forecast service unavailable:", error?.message);
+      }
       return [];
     }
   }

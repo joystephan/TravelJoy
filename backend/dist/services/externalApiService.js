@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const nominatimService_1 = __importDefault(require("./nominatimService"));
 const weatherService_1 = __importDefault(require("./weatherService"));
 const countriesService_1 = __importDefault(require("./countriesService"));
+const hotelService_1 = __importDefault(require("./hotelService"));
 /**
  * Unified External API Service
  * Provides a single interface for all external API integrations
@@ -61,6 +62,13 @@ class ExternalApiService {
     }
     async getTravelInfo(countryCode) {
         return countriesService_1.default.getTravelInfo(countryCode);
+    }
+    /**
+     * Search for hotels in a location
+     * Uses Overpass API for detailed hotel data, falls back to Nominatim
+     */
+    async searchHotels(location, options) {
+        return hotelService_1.default.searchHotels(location, options);
     }
     /**
      * Get comprehensive destination information

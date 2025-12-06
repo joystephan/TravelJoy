@@ -87,48 +87,6 @@ export class ConnectionTester {
     return results;
   }
 
-  async testSubscriptionEndpoints(): Promise<ConnectionTestResult[]> {
-    const endpoints = [
-      { method: "GET", path: "/api/subscription/plans", requiresAuth: false },
-      { method: "GET", path: "/api/subscription/status", requiresAuth: true },
-    ];
-
-    const results: ConnectionTestResult[] = [];
-
-    for (const endpoint of endpoints) {
-      const startTime = Date.now();
-      try {
-        await api.request({
-          method: endpoint.method,
-          url: endpoint.path,
-          validateStatus: (status) => status < 500,
-        });
-
-        const result: ConnectionTestResult = {
-          endpoint: endpoint.path,
-          success: true,
-          message: "Endpoint accessible",
-          responseTime: Date.now() - startTime,
-        };
-
-        results.push(result);
-        this.results.push(result);
-      } catch (error: any) {
-        const result: ConnectionTestResult = {
-          endpoint: endpoint.path,
-          success: false,
-          message: error.message || "Endpoint not accessible",
-          responseTime: Date.now() - startTime,
-        };
-
-        results.push(result);
-        this.results.push(result);
-      }
-    }
-
-    return results;
-  }
-
   async testTripEndpoints(): Promise<ConnectionTestResult[]> {
     const endpoints = [
       { method: "GET", path: "/api/trips", requiresAuth: true },
@@ -177,7 +135,6 @@ export class ConnectionTester {
 
     await this.testHealthEndpoint();
     await this.testAuthEndpoints();
-    await this.testSubscriptionEndpoints();
     await this.testTripEndpoints();
 
     return this.results;

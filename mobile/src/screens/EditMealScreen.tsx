@@ -10,45 +10,32 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { tripService } from "../services/tripService";
-import { Activity } from "../types";
+import { Meal } from "../types";
 import { colors, typography, spacing, borderRadius, shadows } from "../theme";
 
-interface EditActivityScreenProps {
+interface EditMealScreenProps {
   route: any;
   navigation: any;
 }
 
-export default function EditActivityScreen({
+export default function EditMealScreen({
   route,
   navigation,
-}: EditActivityScreenProps) {
-  const { activity, onSave } = route.params;
+}: EditMealScreenProps) {
+  const { meal, onSave } = route.params;
 
-  const [name, setName] = useState(activity.name);
-  const [description, setDescription] = useState(activity.description || "");
-  const [duration, setDuration] = useState(activity.duration.toString());
-  const [cost, setCost] = useState(activity.cost.toString());
-  const [category, setCategory] = useState(activity.category);
+  const [name, setName] = useState(meal.name);
+  const [mealType, setMealType] = useState(meal.mealType);
+  const [cost, setCost] = useState(meal.cost.toString());
+  const [cuisine, setCuisine] = useState(meal.cuisine || "");
   const [loading, setLoading] = useState(false);
 
-  const categories = [
-    "sightseeing",
-    "adventure",
-    "cultural",
-    "relaxation",
-    "shopping",
-    "nightlife",
-    "food",
-    "entertainment",
-  ];
+  const mealTypes = ["breakfast", "lunch", "dinner", "snack", "drinks"];
+  const cuisines = ["local", "international", "asian", "european", "american", "mediterranean"];
 
   const validateForm = () => {
     if (!name.trim()) {
-      Alert.alert("Validation Error", "Please enter an activity name");
-      return false;
-    }
-    if (isNaN(parseFloat(duration)) || parseFloat(duration) <= 0) {
-      Alert.alert("Validation Error", "Please enter a valid duration");
+      Alert.alert("Validation Error", "Please enter a meal name");
       return false;
     }
     if (isNaN(parseFloat(cost)) || parseFloat(cost) < 0) {
@@ -63,15 +50,15 @@ export default function EditActivityScreen({
 
     setLoading(true);
     try {
-      await tripService.updateActivity(activity.id, {
-        name,
-        description,
-        duration: parseFloat(duration),
-        cost: parseFloat(cost),
-        category,
-      });
+      // TODO: Add updateMeal method to tripService
+      // await tripService.updateMeal(meal.id, {
+      //   name,
+      //   mealType,
+      //   cost: parseFloat(cost),
+      //   cuisine: cuisine || undefined,
+      // });
 
-      Alert.alert("Success", "Activity updated successfully", [
+      Alert.alert("Success", "Meal updated successfully", [
         {
           text: "OK",
           onPress: () => {
@@ -81,7 +68,7 @@ export default function EditActivityScreen({
         },
       ]);
     } catch (error: any) {
-      Alert.alert("Error", error.message || "Failed to update activity");
+      Alert.alert("Error", error.message || "Failed to update meal");
     } finally {
       setLoading(false);
     }
@@ -90,39 +77,41 @@ export default function EditActivityScreen({
   return (
     <ScrollView style={styles.container}>
       <View style={styles.content}>
-        <Text style={styles.title}>Edit Activity</Text>
+        <Text style={styles.title}>Edit Meal</Text>
 
         <View style={styles.section}>
-          <Text style={styles.label}>Activity Name</Text>
+          <Text style={styles.label}>Meal Name</Text>
           <TextInput
             style={styles.input}
-            placeholder="e.g., Visit Eiffel Tower"
+            placeholder="e.g., Café du Matin"
             value={name}
             onChangeText={setName}
           />
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.label}>Description</Text>
-          <TextInput
-            style={[styles.input, styles.textArea]}
-            placeholder="Add details about this activity..."
-            value={description}
-            onChangeText={setDescription}
-            multiline
-            numberOfLines={4}
-          />
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.label}>Duration (minutes)</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="120"
-            value={duration}
-            onChangeText={setDuration}
-            keyboardType="numeric"
-          />
+          <Text style={styles.label}>Meal Type</Text>
+          <View style={styles.categoryGrid}>
+            {mealTypes.map((type) => (
+              <TouchableOpacity
+                key={type}
+                style={[
+                  styles.categoryButton,
+                  mealType === type && styles.categoryButtonSelected,
+                ]}
+                onPress={() => setMealType(type)}
+              >
+                <Text
+                  style={[
+                    styles.categoryText,
+                    mealType === type && styles.categoryTextSelected,
+                  ]}
+                >
+                  {type}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
 
         <View style={styles.section}>
@@ -137,24 +126,24 @@ export default function EditActivityScreen({
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.label}>Category</Text>
+          <Text style={styles.label}>Cuisine (Optional)</Text>
           <View style={styles.categoryGrid}>
-            {categories.map((cat) => (
+            {cuisines.map((cuis) => (
               <TouchableOpacity
-                key={cat}
+                key={cuis}
                 style={[
                   styles.categoryButton,
-                  category === cat && styles.categoryButtonSelected,
+                  cuisine === cuis && styles.categoryButtonSelected,
                 ]}
-                onPress={() => setCategory(cat)}
+                onPress={() => setCuisine(cuisine === cuis ? "" : cuis)}
               >
                 <Text
                   style={[
                     styles.categoryText,
-                    category === cat && styles.categoryTextSelected,
+                    cuisine === cuis && styles.categoryTextSelected,
                   ]}
                 >
-                  {cat}
+                  {cuis}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -214,10 +203,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.gray200,
   },
-  textArea: {
-    height: 100,
-    textAlignVertical: "top",
-  },
   categoryGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -230,7 +215,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     borderWidth: 1,
     borderColor: colors.gray200,
-    minHeight: 44, // Professional touch target size
+    minHeight: 44,
   },
   categoryButtonSelected: {
     backgroundColor: colors.primary,
@@ -254,7 +239,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginTop: spacing.md,
-    minHeight: 52, // Professional button height
+    minHeight: 52,
     ...shadows.md,
   },
   saveButtonDisabled: {
@@ -277,7 +262,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl,
     borderWidth: 1,
     borderColor: colors.gray200,
-    minHeight: 44, // Professional touch target size
+    minHeight: 44,
   },
   cancelButtonText: {
     ...typography.button,
@@ -286,3 +271,4 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 });
+

@@ -9,7 +9,6 @@ import {
 } from "../utils/offlineStorage";
 
 export interface CreateTripInput {
-  userId: string;
   destination: string;
   budget: number;
   startDate: Date;
@@ -39,7 +38,10 @@ class TripService {
       // Create temporary offline trip
       const offlineTrip: Trip = {
         id: `offline_${Date.now()}`,
-        ...tripData,
+        destination: tripData.destination,
+        budget: tripData.budget,
+        startDate: tripData.startDate,
+        endDate: tripData.endDate,
         status: "pending",
         createdAt: new Date(),
         dailyPlans: [],
@@ -50,7 +52,10 @@ class TripService {
     }
 
     const response = await api.post("/api/trips", {
-      ...tripData,
+      destination: tripData.destination,
+      budget: tripData.budget,
+      startDate: tripData.startDate.toISOString(),
+      endDate: tripData.endDate.toISOString(),
       preferences: {
         activityType: tripData.preferences?.activityType || [],
         foodPreference: tripData.preferences?.foodPreference || [],
@@ -60,7 +65,8 @@ class TripService {
       },
     });
 
-    const trip = response.data;
+    // Backend returns { message, trip }, so we need to extract the trip
+    const trip = response.data.trip || response.data;
     await saveTripOffline(trip);
     return trip;
   }
@@ -76,7 +82,8 @@ class TripService {
     }
 
     const response = await api.get(`/api/trips/${tripId}`);
-    const trip = response.data;
+    // Backend returns { trip }, so extract it
+    const trip = response.data.trip || response.data;
     await saveTripOffline(trip);
     return trip;
   }
@@ -88,7 +95,8 @@ class TripService {
 
     try {
       const response = await api.get("/api/trips");
-      const trips = response.data;
+      // Backend returns { trips }, so extract it
+      const trips = response.data.trips || response.data || [];
 
       // Update offline storage
       for (const trip of trips) {

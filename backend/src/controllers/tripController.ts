@@ -7,7 +7,17 @@ export class TripController {
    */
   async createTrip(req: Request, res: Response) {
     try {
-      const userId = (req as any).user.userId;
+      const userId = (req as any).user?.id || (req as any).user?.userId;
+      
+      if (!userId) {
+        return res.status(401).json({
+          error: {
+            code: "UNAUTHORIZED",
+            message: "User ID not found in authentication token",
+          },
+        });
+      }
+
       const { destination, budget, startDate, endDate, preferences } = req.body;
 
       // Validate required fields
@@ -83,7 +93,7 @@ export class TripController {
   async getTripById(req: Request, res: Response) {
     try {
       const { tripId } = req.params;
-      const userId = (req as any).user.userId;
+      const userId = (req as any).user?.id || (req as any).user?.userId;
 
       const trip = await tripService.getTripById(tripId);
 
@@ -124,7 +134,7 @@ export class TripController {
    */
   async getUserTrips(req: Request, res: Response) {
     try {
-      const userId = (req as any).user.userId;
+      const userId = (req as any).user?.id || (req as any).user?.userId;
       const trips = await tripService.getUserTrips(userId);
 
       res.json({ trips });
@@ -221,7 +231,7 @@ export class TripController {
   async optimizeTrip(req: Request, res: Response) {
     try {
       const { tripId } = req.params;
-      const userId = (req as any).user.userId;
+      const userId = (req as any).user?.id || (req as any).user?.userId;
       const { budget, preferences } = req.body;
 
       // Verify ownership
@@ -261,7 +271,7 @@ export class TripController {
   async deleteTrip(req: Request, res: Response) {
     try {
       const { tripId } = req.params;
-      const userId = (req as any).user.userId;
+      const userId = (req as any).user?.id || (req as any).user?.userId;
 
       // Verify ownership
       const trip = await tripService.getTripById(tripId);

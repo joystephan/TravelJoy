@@ -8,7 +8,15 @@ class TripController {
      */
     async createTrip(req, res) {
         try {
-            const userId = req.user.userId;
+            const userId = req.user?.id || req.user?.userId;
+            if (!userId) {
+                return res.status(401).json({
+                    error: {
+                        code: "UNAUTHORIZED",
+                        message: "User ID not found in authentication token",
+                    },
+                });
+            }
             const { destination, budget, startDate, endDate, preferences } = req.body;
             // Validate required fields
             if (!destination || !budget || !startDate || !endDate) {
@@ -76,7 +84,7 @@ class TripController {
     async getTripById(req, res) {
         try {
             const { tripId } = req.params;
-            const userId = req.user.userId;
+            const userId = req.user?.id || req.user?.userId;
             const trip = await tripService_1.tripService.getTripById(tripId);
             // Verify ownership
             if (trip.userId !== userId) {
@@ -112,7 +120,7 @@ class TripController {
      */
     async getUserTrips(req, res) {
         try {
-            const userId = req.user.userId;
+            const userId = req.user?.id || req.user?.userId;
             const trips = await tripService_1.tripService.getUserTrips(userId);
             res.json({ trips });
         }
@@ -199,7 +207,7 @@ class TripController {
     async optimizeTrip(req, res) {
         try {
             const { tripId } = req.params;
-            const userId = req.user.userId;
+            const userId = req.user?.id || req.user?.userId;
             const { budget, preferences } = req.body;
             // Verify ownership
             const trip = await tripService_1.tripService.getTripById(tripId);
@@ -236,7 +244,7 @@ class TripController {
     async deleteTrip(req, res) {
         try {
             const { tripId } = req.params;
-            const userId = req.user.userId;
+            const userId = req.user?.id || req.user?.userId;
             // Verify ownership
             const trip = await tripService_1.tripService.getTripById(tripId);
             if (trip.userId !== userId) {

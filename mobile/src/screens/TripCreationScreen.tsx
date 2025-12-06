@@ -26,7 +26,6 @@ export default function TripCreationScreen({
   navigation,
   route,
 }: TripCreationScreenProps) {
-  const [userId, setUserId] = useState("");
   const [destination, setDestination] = useState(route?.params?.destination || "");
   const [budget, setBudget] = useState(1000);
   const [startDate, setStartDate] = useState("");
@@ -40,22 +39,6 @@ export default function TripCreationScreen({
   const [schedulePreference, setSchedulePreference] = useState<
     "relaxed" | "moderate" | "packed"
   >("moderate");
-
-  useEffect(() => {
-    loadUser();
-  }, []);
-
-  const loadUser = async () => {
-    try {
-      const userJson = await AsyncStorage.getItem('user');
-      if (userJson) {
-        const user = JSON.parse(userJson);
-        setUserId(user.id);
-      }
-    } catch (error) {
-      console.error('Error loading user:', error);
-    }
-  };
 
   const activityOptions = [
     { id: "sightseeing", label: "Sightseeing", icon: "🏛️" },
@@ -123,11 +106,6 @@ export default function TripCreationScreen({
   const handleCreateTrip = async () => {
     if (!validateForm()) return;
 
-    if (!userId) {
-      Alert.alert("Error", "You must be logged in to create a trip");
-      return;
-    }
-
     setLoading(true);
     try {
       const preferences: TravelPreferences = {
@@ -138,7 +116,6 @@ export default function TripCreationScreen({
       };
 
       const trip = await tripService.createTrip({
-        userId,
         destination,
         budget,
         startDate: new Date(startDate),
@@ -148,19 +125,29 @@ export default function TripCreationScreen({
 
       Alert.alert(
         "Success! ✨",
-        "Your trip is being generated! You'll be notified when it's ready.",
+        "Your trip is being generated! The itinerary will be ready shortly. You can view it in your trips list.",
         [
           {
             text: "View Trip",
             onPress: () =>
               navigation.navigate("TripDetail", { tripId: trip.id }),
           },
+          {
+            text: "OK",
+            style: "cancel",
+          },
         ]
       );
+      
+      // Navigate to trips list after a short delay
+      setTimeout(() => {
+        navigation.navigate("MainTabs", { screen: "Trips" });
+      }, 2000);
     } catch (error: any) {
+      console.error("Create trip error:", error);
       Alert.alert(
         "Error",
-        error.message || "Failed to create trip. Please try again."
+        error.message || "Failed to create trip. Please check your connection and try again."
       );
     } finally {
       setLoading(false);

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -8,14 +8,14 @@ import {
   Dimensions,
 } from 'react-native';
 import { colors, spacing, borderRadius, shadows, typography } from '../theme';
-import { useWishlist } from '../contexts/WishlistContext';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = (width - spacing.md * 3) / 2;
 
-interface DestinationCardProps {
-  id?: string;
-  destination: string;
+interface HotelCardProps {
+  name: string;
+  address: string;
+  city: string;
   country: string;
   price: number;
   rating: number;
@@ -23,47 +23,17 @@ interface DestinationCardProps {
   onPress: () => void;
 }
 
-export default function DestinationCard({
-  id,
-  destination,
+export default function HotelCard({
+  name,
+  address,
+  city,
   country,
   price,
   rating,
   imageUrl,
   onPress,
-}: DestinationCardProps) {
-  const defaultImage = 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=400';
-  const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
-  const [isWishlisted, setIsWishlisted] = useState(false);
-
-  // Generate ID if not provided (for backward compatibility)
-  const itemId = id || `${destination}-${country}`.toLowerCase().replace(/\s+/g, '-');
-
-  useEffect(() => {
-    setIsWishlisted(isInWishlist(itemId));
-  }, [itemId, isInWishlist]);
-
-  const handleHeartPress = async (e: any) => {
-    e.stopPropagation();
-    try {
-      if (isWishlisted) {
-        await removeFromWishlist(itemId);
-        setIsWishlisted(false);
-      } else {
-        await addToWishlist({
-          id: itemId,
-          destination,
-          country,
-          price,
-          rating,
-          imageUrl,
-        });
-        setIsWishlisted(true);
-      }
-    } catch (error) {
-      console.error('Failed to toggle wishlist:', error);
-    }
-  };
+}: HotelCardProps) {
+  const defaultImage = 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400';
 
   return (
     <TouchableOpacity
@@ -77,16 +47,6 @@ export default function DestinationCard({
         resizeMode="cover"
       />
       
-      {/* Heart Icon - Wishlist Button */}
-      <TouchableOpacity
-        style={styles.heartButton}
-        onPress={handleHeartPress}
-      >
-        <Text style={styles.heartIcon}>
-          {isWishlisted ? '❤️' : '🤍'}
-        </Text>
-      </TouchableOpacity>
-      
       {/* Rating Badge */}
       <View style={styles.ratingBadge}>
         <Text style={styles.ratingText}>⭐ {rating.toFixed(1)}</Text>
@@ -94,18 +54,18 @@ export default function DestinationCard({
 
       {/* Content */}
       <View style={styles.content}>
-        <Text style={styles.destination} numberOfLines={1}>
-          {destination}
+        <Text style={styles.name} numberOfLines={1}>
+          {name}
         </Text>
-        <Text style={styles.country} numberOfLines={1}>
-          {country}
+        <Text style={styles.location} numberOfLines={1}>
+          {city}, {country}
         </Text>
         
         <View style={styles.footer}>
           <Text style={styles.price}>
             <Text style={styles.priceLabel}>from </Text>
             ${price}
-            <Text style={styles.priceUnit}>/day</Text>
+            <Text style={styles.priceUnit}>/night</Text>
           </Text>
           <TouchableOpacity style={styles.locationButton}>
             <Text style={styles.locationIcon}>📍</Text>
@@ -145,24 +105,15 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.textPrimary,
   },
-  heartButton: {
-    position: 'absolute',
-    top: spacing.sm,
-    left: spacing.sm,
-    padding: 4,
-  },
-  heartIcon: {
-    fontSize: 12,
-  },
   content: {
     padding: spacing.sm,
   },
-  destination: {
+  name: {
     ...typography.h4,
     color: colors.textPrimary,
     marginBottom: 2,
   },
-  country: {
+  location: {
     ...typography.caption,
     color: colors.textSecondary,
     marginBottom: spacing.sm,
@@ -199,6 +150,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
 });
-
 
 

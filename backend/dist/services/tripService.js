@@ -13,17 +13,12 @@ class TripService {
      * Create a new trip with AI-generated itinerary
      */
     async createTrip(tripData) {
-        // Validate user subscription and trip limits
+        // Validate user exists
         const user = await database_1.default.user.findUnique({
             where: { id: tripData.userId },
-            include: { subscription: true },
         });
         if (!user) {
             throw new Error("User not found");
-        }
-        // Check trip limits based on subscription
-        if (!user.subscription || user.subscription.status !== "active") {
-            throw new Error("Active subscription required to create trips");
         }
         // Create trip record
         const trip = await database_1.default.trip.create({
@@ -36,14 +31,19 @@ class TripService {
                 status: "generating",
             },
         });
-        // Generate itinerary asynchronously
-        this.generateItineraryForTrip(trip.id, tripData).catch((error) => {
+        // Generate itinerary asynchronously (don't block the response)
+        this.generateItineraryForTrip(trip.id, tripData).catch(async (error) => {
             console.error(`Failed to generate itinerary for trip ${trip.id}:`, error);
             // Update trip status to failed
-            database_1.default.trip.update({
-                where: { id: trip.id },
-                data: { status: "failed" },
-            });
+            try {
+                await database_1.default.trip.update({
+                    where: { id: trip.id },
+                    data: { status: "failed" },
+                });
+            }
+            catch (updateError) {
+                console.error(`Failed to update trip status to failed:`, updateError);
+            }
         });
         return trip;
     }

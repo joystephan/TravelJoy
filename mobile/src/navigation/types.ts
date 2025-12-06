@@ -3,9 +3,6 @@ export type RootStackParamList = {
   CreateTrip: undefined;
   TripDetail: { tripId: string };
   EditActivity: { activityId: string; tripId: string };
-  Subscription: undefined;
-  Payment: { planId: string };
-  ManageSubscription: undefined;
   TravelPreferences: undefined;
 };
 

@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { colors, spacing, borderRadius, shadows, typography } from "../theme";
+import { useAuth } from "../contexts/AuthContext";
 
 interface ProfileScreenProps {
   navigation: any;
@@ -17,6 +18,7 @@ interface ProfileScreenProps {
 
 export default function ProfileScreen({ navigation }: ProfileScreenProps) {
   const [user, setUser] = useState<any>(null);
+  const { logout } = useAuth();
 
   useEffect(() => {
     loadUser();
@@ -40,12 +42,8 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
         text: "Logout",
         style: "destructive",
         onPress: async () => {
-          await AsyncStorage.clear();
-          // Force app restart to show login screen
-          navigation.reset({
-            index: 0,
-            routes: [{ name: "Login" }],
-          });
+          await logout();
+          // RootNavigator will automatically switch to AuthNavigator when isAuthenticated becomes false
         },
       },
     ]);
@@ -98,7 +96,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
           
           <TouchableOpacity
             style={styles.actionButton}
-            onPress={() => navigation.navigate("Trips")}
+            onPress={() => navigation.navigate("MyTrips")}
           >
             <Text style={styles.actionIcon}>✈️</Text>
             <Text style={styles.actionText}>My Trips</Text>
@@ -227,6 +225,6 @@ const styles = StyleSheet.create({
     color: colors.white,
   },
   bottomSpacing: {
-    height: spacing.xl,
+    height: 100, // Extra spacing to prevent overlap with tab bar
   },
 });

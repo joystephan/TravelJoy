@@ -73,16 +73,26 @@ apiClient.interceptors.response.use(
 
     // Log the error for debugging - VERY DETAILED
     if (error.response) {
-      // Server responded with error status
-      console.error("=== API ERROR (Server Response) ===");
-      console.error("Status:", error.response.status);
-      console.error("Status Text:", error.response.statusText);
-      console.error("URL:", originalRequest?.method?.toUpperCase(), originalRequest?.url);
-      console.error("Full URL:", `${API_BASE_URL}${originalRequest?.url}`);
-      console.error("Response Headers:", JSON.stringify(error.response.headers, null, 2));
-      console.error("Response Data:", JSON.stringify(error.response.data, null, 2));
-      console.error("Error Message:", error.message);
-      console.error("===================================");
+      // Skip detailed logging for 404 errors on optional endpoints (weather, hotels, etc.)
+      const isOptionalEndpoint = originalRequest?.url?.includes("/weather") || 
+                                 originalRequest?.url?.includes("/hotels");
+      const is404 = error.response.status === 404;
+      
+      if (isOptionalEndpoint && is404) {
+        // Silently handle 404s for optional endpoints - they're expected
+        // The calling service will handle the fallback
+      } else {
+        // Server responded with error status
+        console.error("=== API ERROR (Server Response) ===");
+        console.error("Status:", error.response.status);
+        console.error("Status Text:", error.response.statusText);
+        console.error("URL:", originalRequest?.method?.toUpperCase(), originalRequest?.url);
+        console.error("Full URL:", `${API_BASE_URL}${originalRequest?.url}`);
+        console.error("Response Headers:", JSON.stringify(error.response.headers, null, 2));
+        console.error("Response Data:", JSON.stringify(error.response.data, null, 2));
+        console.error("Error Message:", error.message);
+        console.error("===================================");
+      }
     } else if (error.request) {
       // Request made but no response received
       console.error("❌ === NETWORK ERROR (No Response) ===");
@@ -116,6 +126,22 @@ apiClient.interceptors.response.use(
     // Parse error
     const apiError = parseAPIError(error);
 
+    // Skip logging for 404 errors on optional endpoints (weather, hotels, etc.)
+    const isOptionalEndpoint = originalRequest?.url?.includes("/weather") || 
+                               originalRequest?.url?.includes("/hotels");
+    const is404 = error.response?.status === 404;
+    
+    if (!(isOptionalEndpoint && is404)) {
+      // Only log non-optional endpoint errors
+      console.error("Request failed:", {
+        code: apiError.code,
+        error: apiError.message,
+        method: originalRequest?.method,
+        statusCode: apiError.statusCode,
+        url: originalRequest?.url,
+      });
+    }
+
     // Don't retry 4xx errors (client errors like validation, not found, etc.)
     // Only retry network errors and 5xx server errors
     const isClientError = error.response?.status && error.response.status >= 400 && error.response.status < 500;
@@ -140,14 +166,18 @@ apiClient.interceptors.response.use(
     }
 
     // Log final error if all retries exhausted or non-retryable error
+    // (Already logged above, but this is for retry exhaustion cases)
     if ((originalRequest?._retry && originalRequest._retry >= maxRetries) || isClientError) {
-      console.error("Request failed:", {
-        url: originalRequest?.url,
-        method: originalRequest?.method,
-        error: apiError.message,
-        code: apiError.code,
-        statusCode: apiError.statusCode,
-      });
+      // Skip logging for 404 errors on optional endpoints (already handled above)
+      if (!(isOptionalEndpoint && is404)) {
+        console.error("Request failed:", {
+          url: originalRequest?.url,
+          method: originalRequest?.method,
+          error: apiError.message,
+          code: apiError.code,
+          statusCode: apiError.statusCode,
+        });
+      }
     }
 
     return Promise.reject(error);
