@@ -32,7 +32,7 @@ export interface CreateSubscriptionResponse {
 class SubscriptionService {
   async getPlans(): Promise<SubscriptionPlan[]> {
     try {
-      const response = await api.get("/subscription/plans");
+      const response = await api.get("/api/subscription/plans");
       return response.data.plans;
     } catch (error: any) {
       throw new Error(error.response?.data?.message || "Failed to fetch plans");
@@ -41,7 +41,7 @@ class SubscriptionService {
 
   async getSubscriptionStatus(): Promise<SubscriptionStatus> {
     try {
-      const response = await api.get("/subscription/status");
+      const response = await api.get("/api/subscription/status");
       return response.data;
     } catch (error: any) {
       throw new Error(
@@ -55,7 +55,7 @@ class SubscriptionService {
     paymentMethodId?: string
   ): Promise<CreateSubscriptionResponse> {
     try {
-      const response = await api.post("/subscription/subscribe", {
+      const response = await api.post("/api/subscription/subscribe", {
         planId,
         paymentMethodId,
       });
@@ -69,7 +69,7 @@ class SubscriptionService {
 
   async cancelSubscription(subscriptionId: string): Promise<void> {
     try {
-      await api.post(`/subscription/cancel/${subscriptionId}`);
+      await api.post(`/api/subscription/cancel/${subscriptionId}`);
     } catch (error: any) {
       throw new Error(
         error.response?.data?.message || "Failed to cancel subscription"
@@ -79,7 +79,7 @@ class SubscriptionService {
 
   async createPaymentIntent(planId: string): Promise<string> {
     try {
-      const response = await api.post("/subscription/create-payment-intent", {
+      const response = await api.post("/api/subscription/create-payment-intent", {
         planId,
       });
       return response.data.clientSecret;

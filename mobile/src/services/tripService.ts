@@ -77,8 +77,7 @@ class TripService {
     }
 
     const response = await api.get(`/api/trips/${tripId}`);
-    // Backend returns { trip }, so we need to extract the trip
-    const trip = response.data.trip || response.data;
+    const trip = response.data;
     await saveTripOffline(trip);
     return trip;
   }
@@ -90,8 +89,7 @@ class TripService {
 
     try {
       const response = await api.get("/api/trips");
-      // Backend returns { trips }, so we need to extract the trips array
-      const trips = response.data.trips || response.data;
+      const trips = response.data;
 
       // Update offline storage
       for (const trip of trips) {
