@@ -49,7 +49,7 @@ class TripService {
       return offlineTrip;
     }
 
-    const response = await api.post("/trips", {
+    const response = await api.post("/api/trips", {
       ...tripData,
       preferences: {
         activityType: tripData.preferences?.activityType || [],
@@ -75,7 +75,7 @@ class TripService {
       return trip;
     }
 
-    const response = await api.get(`/trips/${tripId}`);
+    const response = await api.get(`/api/trips/${tripId}`);
     const trip = response.data;
     await saveTripOffline(trip);
     return trip;
@@ -87,7 +87,7 @@ class TripService {
     }
 
     try {
-      const response = await api.get("/trips");
+      const response = await api.get("/api/trips");
       const trips = response.data;
 
       // Update offline storage
@@ -118,7 +118,7 @@ class TripService {
       return { id: activityId, ...updates };
     }
 
-    const response = await api.put(`/activities/${activityId}`, updates);
+    const response = await api.put(`/api/trips/activities/${activityId}`, updates);
     return response.data;
   }
 
@@ -131,7 +131,7 @@ class TripService {
       return;
     }
 
-    await api.delete(`/activities/${activityId}`);
+    await api.delete(`/api/trips/activities/${activityId}`);
   }
 
   async replaceActivity(
@@ -143,7 +143,7 @@ class TripService {
     }
 
     const response = await api.post(
-      `/activities/${activityId}/replace`,
+      `/api/trips/activities/${activityId}/replace`,
       newActivity
     );
     return response.data;
@@ -160,7 +160,7 @@ class TripService {
       throw new Error("Cannot optimize trips while offline");
     }
 
-    const response = await api.post(`/trips/${tripId}/optimize`, constraints);
+    const response = await api.post(`/api/trips/${tripId}/optimize`, constraints);
     const trip = response.data;
     await saveTripOffline(trip);
     return trip;
@@ -176,7 +176,7 @@ class TripService {
       return;
     }
 
-    await api.delete(`/trips/${tripId}`);
+    await api.delete(`/api/trips/${tripId}`);
     await deleteTripOffline(tripId);
   }
 }
