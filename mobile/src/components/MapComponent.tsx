@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from "react";
-import { View, StyleSheet, Text } from "react-native";
-import MapView, { Marker, PROVIDER_DEFAULT } from "react-native-maps";
+import { View, StyleSheet, Text, Platform } from "react-native";
+import MapView, { Marker, PROVIDER_DEFAULT, PROVIDER_GOOGLE } from "react-native-maps";
 
 interface Location {
   latitude: number;
@@ -44,11 +44,13 @@ export default function MapComponent({
     if (initialRegion) return initialRegion;
 
     if (validLocations.length === 0) {
+      // If no valid locations and no initialRegion, use a default world view
+      // This should rarely happen as initialRegion should be provided with destination coordinates
       return {
-        latitude: 37.78825,
-        longitude: -122.4324,
-        latitudeDelta: 0.0922,
-        longitudeDelta: 0.0421,
+        latitude: 20.0, // Center of world map
+        longitude: 0.0,
+        latitudeDelta: 50.0,
+        longitudeDelta: 50.0,
       };
     }
 
@@ -105,15 +107,26 @@ export default function MapComponent({
     }
   }, [validLocations, defaultRegion]);
 
+  // Use Google Maps on Android for consistent colors, Apple Maps on iOS
+  const mapProvider = Platform.OS === 'android' ? PROVIDER_GOOGLE : PROVIDER_DEFAULT;
+
   return (
     <View style={[styles.container, style]}>
       <MapView
         ref={mapRef}
-        provider={PROVIDER_DEFAULT}
+        provider={mapProvider}
         style={styles.map}
         initialRegion={defaultRegion}
+        mapType="standard"
         showsUserLocation={showUserLocation}
         showsMyLocationButton={showUserLocation}
+        showsBuildings={true}
+        showsTraffic={false}
+        showsIndoors={false}
+        pitchEnabled={false}
+        rotateEnabled={true}
+        scrollEnabled={true}
+        zoomEnabled={true}
         onMapReady={() => {
           console.log("MapComponent - Map ready, region:", defaultRegion);
           // Ensure map centers on location after it's ready

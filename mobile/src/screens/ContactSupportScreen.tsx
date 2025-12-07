@@ -10,8 +10,10 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  StatusBar,
 } from "react-native";
-import { colors, spacing, borderRadius, shadows, typography } from "../theme";
+import { spacing, borderRadius, shadows, typography } from "../theme";
+import { useTheme } from "../contexts/ThemeContext";
 
 interface ContactSupportScreenProps {
   navigation: any;
@@ -20,6 +22,7 @@ interface ContactSupportScreenProps {
 export default function ContactSupportScreen({
   navigation,
 }: ContactSupportScreenProps) {
+  const { colors } = useTheme();
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
   const [email, setEmail] = useState("");
@@ -48,8 +51,11 @@ export default function ContactSupportScreen({
     );
   };
 
+  const styles = createStyles(colors);
+
   return (
     <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle={colors.mode === 'dark' ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
       <KeyboardAvoidingView
         style={styles.container}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -143,7 +149,7 @@ export default function ContactSupportScreen({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: colors.background,
@@ -185,12 +191,11 @@ const styles = StyleSheet.create({
     color: colors.error,
   },
   input: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     borderRadius: borderRadius.lg,
     padding: spacing.md,
     ...typography.body1,
     color: colors.textPrimary,
-    ...shadows.sm,
     borderWidth: 1,
     borderColor: colors.gray200,
   },
@@ -214,9 +219,10 @@ const styles = StyleSheet.create({
     marginTop: spacing.xl,
     marginHorizontal: spacing.md,
     padding: spacing.lg,
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     borderRadius: borderRadius.lg,
-    ...shadows.sm,
+    borderWidth: 1,
+    borderColor: colors.gray200,
   },
   infoTitle: {
     ...typography.h3,

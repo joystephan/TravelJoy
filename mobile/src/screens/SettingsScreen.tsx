@@ -7,8 +7,10 @@ import {
   SafeAreaView,
   ScrollView,
   Switch,
+  StatusBar,
 } from "react-native";
-import { colors, spacing, borderRadius, shadows, typography } from "../theme";
+import { spacing, borderRadius, shadows, typography } from "../theme";
+import { useTheme } from "../contexts/ThemeContext";
 
 interface SettingsScreenProps {
   navigation: any;
@@ -30,35 +32,40 @@ function SettingItem({
   onPress,
   rightComponent,
   showArrow = true,
-}: SettingItemProps) {
+  colors,
+}: SettingItemProps & { colors: any }) {
+  const itemStyles = createItemStyles(colors);
   return (
     <TouchableOpacity
-      style={styles.settingItem}
+      style={itemStyles.settingItem}
       onPress={onPress}
       disabled={!onPress}
       activeOpacity={0.7}
     >
-      <View style={styles.settingIconContainer}>
-        <Text style={styles.settingIcon}>{icon}</Text>
+      <View style={itemStyles.settingIconContainer}>
+        <Text style={itemStyles.settingIcon}>{icon}</Text>
       </View>
-      <View style={styles.settingContent}>
-        <Text style={styles.settingTitle}>{title}</Text>
-        {subtitle && <Text style={styles.settingSubtitle}>{subtitle}</Text>}
+      <View style={itemStyles.settingContent}>
+        <Text style={itemStyles.settingTitle}>{title}</Text>
+        {subtitle && <Text style={itemStyles.settingSubtitle}>{subtitle}</Text>}
       </View>
-      {rightComponent && <View style={styles.settingRight}>{rightComponent}</View>}
+      {rightComponent && <View style={itemStyles.settingRight}>{rightComponent}</View>}
       {showArrow && !rightComponent && (
-        <Text style={styles.settingArrow}>→</Text>
+        <Text style={itemStyles.settingArrow}>→</Text>
       )}
     </TouchableOpacity>
   );
 }
 
 export default function SettingsScreen({ navigation }: SettingsScreenProps) {
+  const { colors, mode, toggleTheme } = useTheme();
   const [notificationsEnabled, setNotificationsEnabled] = React.useState(true);
   const [locationServicesEnabled, setLocationServicesEnabled] = React.useState(true);
+  const styles = createStyles(colors);
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle={colors.mode === 'dark' ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
         {/* Travel Preferences Section */}
         <View style={styles.section}>
@@ -68,6 +75,7 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
             title="Travel Preferences"
             subtitle="Customize your travel style and preferences"
             onPress={() => navigation.navigate("TravelPreferences")}
+            colors={colors}
           />
         </View>
 
@@ -79,12 +87,28 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
             title="Profile Settings"
             subtitle="Manage your account information"
             onPress={() => navigation.navigate("Profile")}
+            colors={colors}
           />
         </View>
 
         {/* App Settings Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>App Settings</Text>
+          <SettingItem
+            icon={mode === 'dark' ? '🌙' : '☀️'}
+            title="Dark Mode"
+            subtitle={mode === 'dark' ? 'Dark theme enabled' : 'Light theme enabled'}
+            rightComponent={
+              <Switch
+                value={mode === 'dark'}
+                onValueChange={toggleTheme}
+                trackColor={{ false: colors.gray300, true: colors.primary }}
+                thumbColor={colors.white}
+              />
+            }
+            showArrow={false}
+            colors={colors}
+          />
           <SettingItem
             icon="🔔"
             title="Notifications"
@@ -98,6 +122,7 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
               />
             }
             showArrow={false}
+            colors={colors}
           />
           <SettingItem
             icon="📍"
@@ -112,6 +137,7 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
               />
             }
             showArrow={false}
+            colors={colors}
           />
         </View>
 
@@ -123,12 +149,14 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
             title="Help & FAQ"
             subtitle="Get answers to common questions"
             onPress={() => navigation.navigate("HelpFAQ")}
+            colors={colors}
           />
           <SettingItem
             icon="📧"
             title="Contact Support"
             subtitle="Get in touch with our team"
             onPress={() => navigation.navigate("ContactSupport")}
+            colors={colors}
           />
         </View>
 
@@ -140,16 +168,19 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
             title="App Version"
             subtitle="1.0.0"
             showArrow={false}
+            colors={colors}
           />
           <SettingItem
             icon="📄"
             title="Terms of Service"
             onPress={() => navigation.navigate("TermsOfService")}
+            colors={colors}
           />
           <SettingItem
             icon="🔒"
             title="Privacy Policy"
             onPress={() => navigation.navigate("PrivacyPolicy")}
+            colors={colors}
           />
         </View>
 
@@ -160,7 +191,7 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: colors.background,
@@ -178,14 +209,21 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
     fontWeight: "600",
   },
+  bottomSpacing: {
+    height: spacing.xl,
+  },
+});
+
+const createItemStyles = (colors: any) => StyleSheet.create({
   settingItem: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     borderRadius: borderRadius.lg,
     padding: spacing.md,
     marginBottom: spacing.sm,
-    ...shadows.sm,
+    borderWidth: 1,
+    borderColor: colors.gray200,
   },
   settingIconContainer: {
     width: 48,
@@ -219,9 +257,6 @@ const styles = StyleSheet.create({
     ...typography.h3,
     color: colors.textLight,
     marginLeft: spacing.sm,
-  },
-  bottomSpacing: {
-    height: spacing.xl,
   },
 });
 

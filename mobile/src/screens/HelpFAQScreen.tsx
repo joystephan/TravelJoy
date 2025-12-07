@@ -6,8 +6,10 @@ import {
   SafeAreaView,
   ScrollView,
   TouchableOpacity,
+  StatusBar,
 } from "react-native";
-import { colors, spacing, borderRadius, shadows, typography } from "../theme";
+import { spacing, borderRadius, shadows, typography } from "../theme";
+import { useTheme } from "../contexts/ThemeContext";
 
 interface HelpFAQScreenProps {
   navigation: any;
@@ -42,6 +44,7 @@ const FAQ_ITEMS = [
 ];
 
 export default function HelpFAQScreen({ navigation }: HelpFAQScreenProps) {
+  const { colors } = useTheme();
   const [expandedItems, setExpandedItems] = React.useState<number[]>([]);
 
   const toggleItem = (index: number) => {
@@ -52,8 +55,11 @@ export default function HelpFAQScreen({ navigation }: HelpFAQScreenProps) {
     }
   };
 
+  const styles = createStyles(colors);
+
   return (
     <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle={colors.mode === 'dark' ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <Text style={styles.title}>Help & FAQ</Text>
@@ -104,7 +110,7 @@ export default function HelpFAQScreen({ navigation }: HelpFAQScreenProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: colors.background,
@@ -130,11 +136,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
   },
   faqItem: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     borderRadius: borderRadius.lg,
     marginBottom: spacing.md,
     overflow: "hidden",
-    ...shadows.sm,
+    borderWidth: 1,
+    borderColor: colors.gray200,
   },
   questionContainer: {
     flexDirection: "row",
@@ -170,10 +177,11 @@ const styles = StyleSheet.create({
     marginTop: spacing.xl,
     marginHorizontal: spacing.md,
     padding: spacing.lg,
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     borderRadius: borderRadius.lg,
     alignItems: "center",
-    ...shadows.sm,
+    borderWidth: 1,
+    borderColor: colors.gray200,
   },
   contactTitle: {
     ...typography.h3,

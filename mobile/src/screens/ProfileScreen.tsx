@@ -7,9 +7,11 @@ import {
   SafeAreaView,
   ScrollView,
   Alert,
+  StatusBar,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { colors, spacing, borderRadius, shadows, typography } from "../theme";
+import { spacing, borderRadius, shadows, typography } from "../theme";
+import { useTheme } from "../contexts/ThemeContext";
 import { useAuth } from "../contexts/AuthContext";
 
 interface ProfileScreenProps {
@@ -17,6 +19,7 @@ interface ProfileScreenProps {
 }
 
 export default function ProfileScreen({ navigation }: ProfileScreenProps) {
+  const { colors } = useTheme();
   const [user, setUser] = useState<any>(null);
   const { logout } = useAuth();
 
@@ -49,8 +52,11 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
     ]);
   };
 
+  const styles = createStyles(colors);
+
   return (
     <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle={colors.mode === 'dark' ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
       <ScrollView style={styles.container}>
         <View style={styles.header}>
           <View style={styles.avatarContainer}>
@@ -96,7 +102,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
           
           <TouchableOpacity
             style={styles.actionButton}
-            onPress={() => navigation.navigate("MyTrips")}
+            onPress={() => navigation.navigate("MainTabs", { screen: "Trips" })}
           >
             <Text style={styles.actionIcon}>✈️</Text>
             <Text style={styles.actionText}>My Trips</Text>
@@ -119,7 +125,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: colors.background,
@@ -130,10 +136,11 @@ const styles = StyleSheet.create({
   header: {
     alignItems: "center",
     paddingVertical: spacing.xl,
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     borderBottomLeftRadius: borderRadius.xl,
     borderBottomRightRadius: borderRadius.xl,
-    ...shadows.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.gray200,
   },
   avatarContainer: {
     width: 100,
@@ -169,10 +176,11 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   infoCard: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     borderRadius: borderRadius.lg,
     padding: spacing.lg,
-    ...shadows.sm,
+    borderWidth: 1,
+    borderColor: colors.gray200,
   },
   infoRow: {
     flexDirection: "row",
@@ -197,11 +205,12 @@ const styles = StyleSheet.create({
   actionButton: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     borderRadius: borderRadius.lg,
     padding: spacing.lg,
     marginBottom: spacing.sm,
-    ...shadows.sm,
+    borderWidth: 1,
+    borderColor: colors.gray200,
   },
   actionIcon: {
     fontSize: 24,

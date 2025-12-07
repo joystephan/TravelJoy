@@ -8,13 +8,16 @@ import {
   RefreshControl,
   SafeAreaView,
   StatusBar,
+  Platform,
 } from "react-native";
 import { tripService } from "../services/tripService";
 import { Trip } from "../types";
 import LoadingSpinner from "../components/LoadingSpinner";
-import { colors, spacing, borderRadius, shadows, typography } from "../theme";
+import { spacing, borderRadius, shadows, typography } from "../theme";
+import { useTheme } from "../contexts/ThemeContext";
 
 export default function TripHistoryScreen({ navigation }: any) {
+  const { colors } = useTheme();
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -98,9 +101,14 @@ export default function TripHistoryScreen({ navigation }: any) {
     return <LoadingSpinner fullScreen={true} message="Loading trips..." />;
   }
 
+  const styles = createStyles(colors);
+
+  // Add extra padding on Android to match iOS safe area appearance
+  const statusBarHeight = Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 12 : 0;
+
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
+    <SafeAreaView style={[styles.safeArea, Platform.OS === 'android' && { paddingTop: statusBarHeight }]}>
+      <StatusBar barStyle={colors.mode === 'dark' ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
       {trips.length === 0 ? (
         <View style={styles.emptyState}>
           <Text style={styles.emptyIcon}>✈️</Text>
@@ -131,7 +139,7 @@ export default function TripHistoryScreen({ navigation }: any) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: colors.background,
@@ -144,11 +152,12 @@ const styles = StyleSheet.create({
     paddingBottom: 120, // Extra spacing to prevent overlap with tab bar
   },
   tripCard: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     borderRadius: borderRadius.lg,
     padding: spacing.md,
     marginBottom: spacing.md,
-    ...shadows.sm,
+    borderWidth: 1,
+    borderColor: colors.gray200,
   },
   tripHeader: {
     flexDirection: "row",

@@ -6,8 +6,11 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  StatusBar,
+  SafeAreaView,
 } from "react-native";
 import { useAuth } from "../contexts/AuthContext";
+import { useTheme } from "../contexts/ThemeContext";
 import LoadingSpinner from "../components/LoadingSpinner";
 
 const ACTIVITY_TYPES = [
@@ -51,6 +54,7 @@ const SCHEDULE_PREFERENCES = [
 ];
 
 export default function TravelPreferencesScreen({ navigation }: any) {
+  const { colors } = useTheme();
   const { user, updatePreferences } = useAuth();
   const [loading, setLoading] = useState(false);
   const [activityTypes, setActivityTypes] = useState<string[]>([]);
@@ -123,8 +127,12 @@ export default function TravelPreferencesScreen({ navigation }: any) {
     return <LoadingSpinner fullScreen={true} message="Saving preferences..." />;
   }
 
+  const styles = createStyles(colors);
+
   return (
-    <ScrollView style={styles.container}>
+    <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle={colors.mode === 'dark' ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
+      <ScrollView style={styles.container}>
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Activity Types</Text>
         <Text style={styles.sectionDescription}>
@@ -268,33 +276,38 @@ export default function TravelPreferencesScreen({ navigation }: any) {
           <Text style={styles.saveButtonText}>Save Preferences</Text>
         </TouchableOpacity>
       </View>
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
   container: {
     flex: 1,
-    backgroundColor: "#f5f5f5",
+    backgroundColor: colors.background,
   },
   section: {
-    backgroundColor: "#fff",
+    backgroundColor: colors.surface,
     marginTop: 16,
     paddingHorizontal: 24,
     paddingVertical: 20,
     borderTopWidth: 1,
     borderBottomWidth: 1,
-    borderColor: "#e0e0e0",
+    borderColor: colors.gray200,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: "600",
-    color: "#333",
+    color: colors.textPrimary,
     marginBottom: 8,
   },
   sectionDescription: {
     fontSize: 14,
-    color: "#666",
+    color: colors.textSecondary,
     marginBottom: 16,
     lineHeight: 20,
   },
@@ -304,9 +317,9 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   option: {
-    backgroundColor: "#f9f9f9",
+    backgroundColor: colors.gray50,
     borderWidth: 2,
-    borderColor: "#e0e0e0",
+    borderColor: colors.gray200,
     borderRadius: 12,
     padding: 12,
     alignItems: "center",
@@ -314,8 +327,8 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   optionSelected: {
-    backgroundColor: "#E3F2FD",
-    borderColor: "#007AFF",
+    backgroundColor: colors.primaryLight,
+    borderColor: colors.primary,
   },
   optionIcon: {
     fontSize: 32,
@@ -323,17 +336,17 @@ const styles = StyleSheet.create({
   },
   optionLabel: {
     fontSize: 12,
-    color: "#666",
+    color: colors.textSecondary,
     textAlign: "center",
   },
   optionLabelSelected: {
-    color: "#007AFF",
+    color: colors.primary,
     fontWeight: "600",
   },
   scheduleOption: {
-    backgroundColor: "#f9f9f9",
+    backgroundColor: colors.gray50,
     borderWidth: 2,
-    borderColor: "#e0e0e0",
+    borderColor: colors.gray200,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
@@ -342,8 +355,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   scheduleOptionSelected: {
-    backgroundColor: "#E3F2FD",
-    borderColor: "#007AFF",
+    backgroundColor: colors.primaryLight,
+    borderColor: colors.primary,
   },
   scheduleOptionContent: {
     flex: 1,
@@ -351,26 +364,26 @@ const styles = StyleSheet.create({
   scheduleOptionLabel: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#333",
+    color: colors.textPrimary,
     marginBottom: 4,
   },
   scheduleOptionLabelSelected: {
-    color: "#007AFF",
+    color: colors.primary,
   },
   scheduleOptionDescription: {
     fontSize: 14,
-    color: "#666",
+    color: colors.textSecondary,
   },
   checkmark: {
     fontSize: 24,
-    color: "#007AFF",
+    color: colors.primary,
     fontWeight: "bold",
   },
   buttonContainer: {
     padding: 24,
   },
   saveButton: {
-    backgroundColor: "#007AFF",
+    backgroundColor: colors.primary,
     padding: 16,
     borderRadius: 8,
     alignItems: "center",
@@ -378,6 +391,6 @@ const styles = StyleSheet.create({
   saveButtonText: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#fff",
+    color: colors.white,
   },
 });

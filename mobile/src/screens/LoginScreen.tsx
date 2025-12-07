@@ -41,17 +41,27 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
       // No need to manually navigate - the AuthContext will trigger a re-render
       // and RootNavigator will switch to AppNavigator
     } catch (error: any) {
-      Alert.alert(
-        "Login Failed",
-        error.response?.data?.error?.message || error.message || "Invalid email or password. Please try again."
-      );
+      // Extract user-friendly error message
+      let errorMessage = "Invalid email or password. Please try again.";
+      
+      if (error?.response?.data?.error?.message) {
+        errorMessage = error.response.data.error.message;
+      } else if (error?.message && !error.message.includes("Request failed")) {
+        // Only use error.message if it's not a technical error message
+        errorMessage = error.message;
+      }
+      
+      // Show user-friendly alert (not raw error objects)
+      Alert.alert("Login Failed", errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
+  const statusBarHeight = Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 12 : 0;
+
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, Platform.OS === 'android' && { paddingTop: statusBarHeight }]}>
       <StatusBar barStyle="dark-content" backgroundColor={colors.white} />
       <KeyboardAvoidingView
         style={styles.container}
@@ -185,6 +195,7 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     padding: spacing.lg,
+    paddingBottom: Platform.OS === 'android' ? spacing.xl : spacing.lg,
     justifyContent: 'center',
   },
   header: {
@@ -319,6 +330,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
+    marginBottom: Platform.OS === 'android' ? spacing.xl : spacing.lg,
+    paddingBottom: Platform.OS === 'android' ? spacing.md : 0,
   },
   signupText: {
     ...typography.body2,
