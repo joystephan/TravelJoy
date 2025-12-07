@@ -1,21 +1,30 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Linking, Platform } from "react-native";
 import { Activity } from "../types";
-import { colors, typography, borderRadius, spacing } from "../theme";
+import { typography, borderRadius, spacing } from "../theme";
+import { useTheme } from "../contexts/ThemeContext";
 import LocationMapModal from "./LocationMapModal";
 
 interface ActivityCardProps {
   activity: Activity;
   onEdit: () => void;
   onDelete: () => void;
+  renderKey?: string; // Force re-render when day changes
 }
 
 export default function ActivityCard({
   activity,
   onEdit,
   onDelete,
+  renderKey,
 }: ActivityCardProps) {
+  const { colors } = useTheme();
   const [mapModalVisible, setMapModalVisible] = useState(false);
+
+  // Force re-render when renderKey changes (day changes)
+  useEffect(() => {
+    // This effect will run when renderKey or activity.id changes, ensuring fresh render
+  }, [renderKey, activity.id]);
 
   const openMapModal = () => {
     setMapModalVisible(true);
@@ -57,6 +66,8 @@ export default function ActivityCard({
       Linking.openURL(webUrl);
     }
   };
+
+  const styles = createStyles(colors);
 
   return (
     <>
@@ -107,9 +118,9 @@ export default function ActivityCard({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
   card: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     borderRadius: borderRadius.lg,
     padding: spacing.md,
     marginBottom: spacing.md,

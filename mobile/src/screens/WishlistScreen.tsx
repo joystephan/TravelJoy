@@ -10,12 +10,15 @@ import {
   SafeAreaView,
   StatusBar,
   RefreshControl,
+  Platform,
 } from 'react-native';
 import { useWishlist } from '../contexts/WishlistContext';
-import { colors, spacing, borderRadius, shadows, typography } from '../theme';
+import { spacing, borderRadius, shadows, typography } from '../theme';
+import { useTheme } from '../contexts/ThemeContext';
 import LoadingSpinner from '../components/LoadingSpinner';
 
 export default function WishlistScreen({ navigation }: any) {
+  const { colors } = useTheme();
   const { wishlist, isLoading, removeFromWishlist, refreshWishlist } = useWishlist();
   const [refreshing, setRefreshing] = useState(false);
 
@@ -106,18 +109,22 @@ export default function WishlistScreen({ navigation }: any) {
     return <LoadingSpinner fullScreen={true} message="Loading wishlist..." />;
   }
 
+  const styles = createStyles(colors);
+  // Add extra padding on Android to match iOS safe area appearance
+  const statusBarHeight = Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 12 : 0;
+
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
+    <SafeAreaView style={[styles.safeArea, Platform.OS === 'android' && { paddingTop: statusBarHeight }]}>
+      <StatusBar barStyle={colors.mode === 'dark' ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
       {wishlist.length === 0 ? (
         <View style={styles.emptyState}>
-          <Text style={styles.emptyTitle}>Your wishlist is empty</Text>
+          <Text style={styles.emptyTitle} numberOfLines={2}>Your wishlist is empty</Text>
           <Text style={styles.emptyText}>
             Start adding destinations to your wishlist to plan your next adventure!
           </Text>
           <TouchableOpacity
             style={styles.exploreButton}
-            onPress={() => navigation.navigate('Home')}
+            onPress={() => navigation.navigate('Explore')}
           >
             <Text style={styles.exploreButtonText}>Explore Destinations</Text>
           </TouchableOpacity>
@@ -140,7 +147,7 @@ export default function WishlistScreen({ navigation }: any) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: colors.background,
@@ -157,11 +164,12 @@ const styles = StyleSheet.create({
   },
   card: {
     width: '48%',
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     borderRadius: borderRadius.lg,
     overflow: 'hidden',
     marginBottom: spacing.md,
-    ...shadows.md,
+    borderWidth: 1,
+    borderColor: colors.gray200,
   },
   image: {
     width: '100%',
@@ -172,11 +180,12 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: spacing.sm,
     right: spacing.sm,
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     borderRadius: borderRadius.md,
     paddingHorizontal: spacing.sm,
     paddingVertical: 4,
-    ...shadows.sm,
+    borderWidth: 1,
+    borderColor: colors.gray200,
   },
   ratingText: {
     ...typography.caption,
@@ -190,10 +199,11 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     justifyContent: 'center',
     alignItems: 'center',
-    ...shadows.sm,
+    borderWidth: 1,
+    borderColor: colors.gray200,
   },
   heartIcon: {
     fontSize: 18,
@@ -256,6 +266,9 @@ const styles = StyleSheet.create({
     ...typography.h2,
     color: colors.textPrimary,
     marginBottom: spacing.sm,
+    textAlign: 'center',
+    paddingHorizontal: spacing.md,
+    width: '100%',
   },
   emptyText: {
     ...typography.body1,

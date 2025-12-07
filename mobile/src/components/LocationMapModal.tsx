@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -6,9 +6,12 @@ import {
   StyleSheet,
   TouchableOpacity,
   Dimensions,
+  ActivityIndicator,
 } from "react-native";
 import MapComponent from "./MapComponent";
-import { colors, spacing, borderRadius, typography } from "../theme";
+import { spacing, borderRadius, typography } from "../theme";
+import { useTheme } from "../contexts/ThemeContext";
+import { geocodeDestination, getDefaultCoordinatesForDestination } from "../utils/geocoding";
 
 const { width, height } = Dimensions.get("window");
 
@@ -20,36 +23,131 @@ interface LocationMapModalProps {
     longitude: number;
     name: string;
   };
-  onGetDirections?: () => void;
+  destination?: string; // Optional destination context for better geocoding
+  onGetDirections?: (latitude: number, longitude: number) => void;
 }
 
 export default function LocationMapModal({
   visible,
   onClose,
   location,
+  destination,
   onGetDirections,
 }: LocationMapModalProps) {
-  // Debug: Log coordinates when modal opens
-  React.useEffect(() => {
-    if (visible) {
-      console.log("LocationMapModal - Location:", {
-        name: location.name,
-        latitude: location.latitude,
-        longitude: location.longitude,
-        isValid: location.latitude !== 0 && location.longitude !== 0 && 
-                 !isNaN(location.latitude) && !isNaN(location.longitude)
-      });
-    }
-  }, [visible, location]);
+  const { colors } = useTheme();
+  const [geocodedLocation, setGeocodedLocation] = useState<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
+  const [isGeocoding, setIsGeocoding] = useState(false);
 
-  // Check if coordinates are valid
-  const isValidLocation = 
+  // Check if original coordinates are valid
+  const isOriginalValid = 
     location.latitude !== 0 && 
     location.longitude !== 0 && 
     !isNaN(location.latitude) && 
     !isNaN(location.longitude) &&
     Math.abs(location.latitude) <= 90 &&
     Math.abs(location.longitude) <= 180;
+
+  // Use geocoded location if original is invalid
+  const isValidLocation = isOriginalValid || geocodedLocation !== null;
+  const displayLocation = isOriginalValid 
+    ? location 
+    : geocodedLocation 
+      ? { ...location, latitude: geocodedLocation.latitude, longitude: geocodedLocation.longitude }
+      : location;
+
+  // Try to geocode location name if coordinates are invalid (only once per location)
+  useEffect(() => {
+    // Only run if modal is visible, coordinates are invalid, and we haven't already geocoded
+    if (!visible || isOriginalValid || geocodedLocation || isGeocoding) {
+      return;
+    }
+
+    setIsGeocoding(true);
+    
+    // First, try to get destination fallback coordinates immediately as a safety net
+    let destinationFallback: { latitude: number; longitude: number } | null = null;
+    if (destination) {
+      const fallbackCoords = getDefaultCoordinatesForDestination(destination);
+      if (fallbackCoords) {
+        destinationFallback = fallbackCoords;
+      }
+    }
+    
+    // Use destination context if available for better geocoding results
+    geocodeDestination(location.name, destination || undefined)
+      .then((coords) => {
+        if (coords) {
+          setGeocodedLocation(coords);
+        } else {
+          // If geocoding fails, use destination fallback
+          if (destinationFallback) {
+            setGeocodedLocation(destinationFallback);
+          } else if (destination) {
+            // Last resort: try to geocode just the destination name
+            geocodeDestination(destination)
+              .then((destCoords) => {
+                if (destCoords) {
+                  setGeocodedLocation(destCoords);
+                } else if (destinationFallback) {
+                  setGeocodedLocation(destinationFallback);
+                }
+              })
+              .catch(() => {
+                if (destinationFallback) {
+                  setGeocodedLocation(destinationFallback);
+                }
+              });
+          }
+        }
+      })
+      .catch((error) => {
+        console.warn('Failed to geocode location:', error);
+        // Use destination fallback on error
+        if (destinationFallback) {
+          setGeocodedLocation(destinationFallback);
+        } else if (destination) {
+          // Last resort: try to geocode just the destination name
+          geocodeDestination(destination)
+            .then((destCoords) => {
+              if (destCoords) {
+                setGeocodedLocation(destCoords);
+              }
+            })
+            .catch(() => {
+              // Silently fail
+            });
+        }
+      })
+      .finally(() => {
+        setIsGeocoding(false);
+      });
+  }, [visible, location.name, location.latitude, location.longitude, destination, isOriginalValid]);
+
+  // Reset geocoded location when modal closes
+  useEffect(() => {
+    if (!visible) {
+      setGeocodedLocation(null);
+      setIsGeocoding(false);
+    }
+  }, [visible]);
+
+  // Debug: Log coordinates when modal opens
+  useEffect(() => {
+    if (visible) {
+      console.log("LocationMapModal - Location:", {
+        name: location.name,
+        latitude: location.latitude,
+        longitude: location.longitude,
+        isValid: isOriginalValid,
+        geocoded: geocodedLocation !== null,
+      });
+    }
+  }, [visible, location, isOriginalValid, geocodedLocation]);
+
+  const styles = createStyles(colors);
 
   return (
     <Modal
@@ -66,8 +164,10 @@ export default function LocationMapModal({
               {/* Debug: Show coordinates for testing */}
               <Text style={styles.coordinates}>
                 {isValidLocation 
-                  ? `${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)}`
-                  : "Invalid coordinates"}
+                  ? `${displayLocation.latitude.toFixed(4)}, ${displayLocation.longitude.toFixed(4)}`
+                  : isGeocoding
+                    ? "Looking up..."
+                    : "Invalid coordinates"}
               </Text>
             </View>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
@@ -76,10 +176,18 @@ export default function LocationMapModal({
           </View>
 
           <View style={styles.mapContainer}>
-            {isValidLocation ? (
+            {isGeocoding ? (
+              <View style={styles.errorContainer}>
+                <ActivityIndicator size="large" color={colors.primary} />
+                <Text style={styles.errorTitle}>Finding location...</Text>
+                <Text style={styles.errorMessage}>
+                  Looking up coordinates for {location.name}
+                </Text>
+              </View>
+            ) : isValidLocation ? (
               <MapComponent
-                key={`${location.latitude}-${location.longitude}`}
-                locations={[location]}
+                key={`${displayLocation.latitude}-${displayLocation.longitude}`}
+                locations={[displayLocation]}
                 style={styles.map}
               />
             ) : (
@@ -90,17 +198,24 @@ export default function LocationMapModal({
                   Coordinates: {location.latitude}, {location.longitude}
                 </Text>
                 <Text style={styles.errorMessage}>
-                  This location doesn't have valid coordinates.
+                  Could not find coordinates for this location.
                 </Text>
               </View>
             )}
           </View>
 
           <View style={styles.actions}>
-            {onGetDirections && (
+            {onGetDirections && isValidLocation && displayLocation && (
               <TouchableOpacity
                 style={styles.directionsButton}
-                onPress={onGetDirections}
+                onPress={() => {
+                  // Use geocoded coordinates if available, otherwise use original
+                  const lat = displayLocation.latitude;
+                  const lon = displayLocation.longitude;
+                  if (lat && lon && !isNaN(lat) && !isNaN(lon)) {
+                    onGetDirections(lat, lon);
+                  }
+                }}
               >
                 <Text style={styles.directionsButtonText}>🗺️ Get Directions</Text>
               </TouchableOpacity>
@@ -118,18 +233,20 @@ export default function LocationMapModal({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    backgroundColor: colors.overlay,
     justifyContent: "flex-end",
   },
   modalContent: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     borderTopLeftRadius: borderRadius.xl,
     borderTopRightRadius: borderRadius.xl,
     height: height * 0.8,
     paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.gray200,
   },
   header: {
     flexDirection: "row",
@@ -157,9 +274,11 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: colors.gray100,
+    backgroundColor: colors.gray50,
     justifyContent: "center",
     alignItems: "center",
+    borderWidth: 1,
+    borderColor: colors.gray200,
   },
   closeButtonText: {
     fontSize: 18,
@@ -195,12 +314,14 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   closeModalButton: {
-    backgroundColor: colors.gray100,
+    backgroundColor: colors.gray50,
     borderRadius: borderRadius.lg,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,
     alignItems: "center",
     justifyContent: "center",
+    borderWidth: 1,
+    borderColor: colors.gray200,
   },
   closeModalButtonText: {
     ...typography.button,

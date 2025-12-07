@@ -23,16 +23,31 @@ export default function WeatherWidget({
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadWeather();
+    // Only load weather if coordinates are valid (not 0,0)
+    if (latitude !== 0 || longitude !== 0) {
+      loadWeather();
+    } else {
+      // Invalid coordinates - skip weather call
+      setLoading(false);
+      setWeather(null);
+    }
   }, [latitude, longitude, date]);
 
   const loadWeather = async () => {
+    // Double-check coordinates are valid before making API call
+    if (latitude === 0 && longitude === 0) {
+      setLoading(false);
+      setWeather(null);
+      return;
+    }
+
     try {
       setLoading(true);
       const data = await weatherService.getWeather(latitude, longitude);
       setWeather(data);
     } catch (error) {
-      console.error("Failed to load weather:", error);
+      // Silently handle weather errors - it's optional
+      setWeather(null);
     } finally {
       setLoading(false);
     }

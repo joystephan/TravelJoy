@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -7,16 +7,19 @@ import {
   StyleSheet,
   StatusBar,
   SafeAreaView,
+  FlatList,
+  Platform,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { colors, spacing, borderRadius, shadows, typography } from '../theme';
+import { spacing, borderRadius, shadows, typography } from '../theme';
+import { useTheme } from '../contexts/ThemeContext';
 import SearchBar from '../components/SearchBar';
 import CategoryChip from '../components/CategoryChip';
 import DestinationCard from '../components/DestinationCard';
 import HotelCard from '../components/HotelCard';
 import FlightCard from '../components/FlightCard';
 import LoadingSpinner from '../components/LoadingSpinner';
-import DrawerMenu from '../components/DrawerMenu';
 import { hotelService, Hotel } from '../services/hotelService';
 import { flightService, Flight } from '../services/flightService';
 
@@ -73,7 +76,7 @@ const POPULAR_DESTINATIONS = [
   // Middle East & Africa
   { id: '39', destination: 'Dubai', country: 'UAE', price: 250, rating: 4.7, imageUrl: 'https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=400' },
   { id: '40', destination: 'Abu Dhabi', country: 'UAE', price: 240, rating: 4.8, imageUrl: 'https://images.unsplash.com/photo-1587330979470-3585ac3d45b3?w=400' },
-  { id: '41', destination: 'Beirut', country: 'Lebanon', price: 110, rating: 4.7, imageUrl: 'https://images.unsplash.com/photo-1587330979470-3585ac3d45b3?w=400' },
+  { id: '41', destination: 'Beirut', country: 'Lebanon', price: 110, rating: 4.7, imageUrl: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400' },
   { id: '42', destination: 'Cairo', country: 'Egypt', price: 70, rating: 4.6, imageUrl: 'https://images.unsplash.com/photo-1539650116574-75c0c6d73a6e?w=400' },
   { id: '43', destination: 'Marrakech', country: 'Morocco', price: 90, rating: 4.7, imageUrl: 'https://images.unsplash.com/photo-1518548419970-58e3b4079ab2?w=400' },
   { id: '44', destination: 'Cape Town', country: 'South Africa', price: 100, rating: 4.8, imageUrl: 'https://images.unsplash.com/photo-1587330979470-3585ac3d45b3?w=400' },
@@ -90,10 +93,10 @@ const CATEGORIES = [
   { id: 'all', label: 'All', icon: '🌍' },
   { id: 'hotels', label: 'Hotels', icon: '🏨' },
   { id: 'flights', label: 'Flights', icon: '✈️' },
-  { id: 'popular', label: 'Popular', icon: '🔥' },
 ];
 
 export default function ExploreScreen({ navigation }: ExploreScreenProps) {
+  const { colors } = useTheme();
   const [userName, setUserName] = useState('Traveler');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -101,10 +104,14 @@ export default function ExploreScreen({ navigation }: ExploreScreenProps) {
   const [loadingHotels, setLoadingHotels] = useState(false);
   const [flights, setFlights] = useState<Flight[]>([]);
   const [loadingFlights, setLoadingFlights] = useState(false);
-  const [drawerVisible, setDrawerVisible] = useState(false);
+  const [allHotels, setAllHotels] = useState<Hotel[]>([]);
+  const [allFlights, setAllFlights] = useState<Flight[]>([]);
 
   useEffect(() => {
     loadUser();
+    // Load all hotels and flights for search suggestions
+    loadAllHotels();
+    loadAllFlights();
   }, []);
 
   useEffect(() => {
@@ -160,15 +167,27 @@ export default function ExploreScreen({ navigation }: ExploreScreenProps) {
     }
   };
 
-  const filteredDestinations = POPULAR_DESTINATIONS.filter((dest) =>
-    dest.destination.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    dest.country.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const loadAllHotels = async () => {
+    try {
+      const allHotelsData = await hotelService.getPopularHotels();
+      setAllHotels(allHotelsData);
+    } catch (error) {
+      console.error('Error loading all hotels:', error);
+      setAllHotels([]);
+    }
+  };
 
-  // Popular destinations (top-rated, rating >= 4.7)
-  const popularDestinations = POPULAR_DESTINATIONS.filter((dest) =>
-    dest.rating >= 4.7
-  ).filter((dest) =>
+  const loadAllFlights = async () => {
+    try {
+      const allFlightsData = await flightService.getPopularFlights();
+      setAllFlights(allFlightsData);
+    } catch (error) {
+      console.error('Error loading all flights:', error);
+      setAllFlights([]);
+    }
+  };
+
+  const filteredDestinations = POPULAR_DESTINATIONS.filter((dest) =>
     dest.destination.toLowerCase().includes(searchQuery.toLowerCase()) ||
     dest.country.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -186,6 +205,73 @@ export default function ExploreScreen({ navigation }: ExploreScreenProps) {
     flight.airline.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // Search suggestions for autocomplete
+  const searchSuggestions = useMemo(() => {
+    if (!searchQuery || searchQuery.length === 0) return [];
+    
+    const query = searchQuery.toLowerCase();
+    const suggestions: Array<{
+      id: string;
+      type: 'destination' | 'hotel' | 'flight';
+      title: string;
+      subtitle: string;
+      data: any;
+    }> = [];
+
+    // Destinations (limit to 5)
+    const destMatches = POPULAR_DESTINATIONS.filter((dest) =>
+      dest.destination.toLowerCase().includes(query) ||
+      dest.country.toLowerCase().includes(query)
+    ).slice(0, 5);
+    
+    destMatches.forEach((dest) => {
+      suggestions.push({
+        id: `dest-${dest.id}`,
+        type: 'destination',
+        title: dest.destination,
+        subtitle: dest.country,
+        data: dest,
+      });
+    });
+
+    // Hotels (limit to 5)
+    const hotelMatches = allHotels.filter((hotel) =>
+      hotel.name.toLowerCase().includes(query) ||
+      hotel.city.toLowerCase().includes(query) ||
+      hotel.country.toLowerCase().includes(query)
+    ).slice(0, 5);
+    
+    hotelMatches.forEach((hotel) => {
+      suggestions.push({
+        id: `hotel-${hotel.id}`,
+        type: 'hotel',
+        title: hotel.name,
+        subtitle: `${hotel.city}, ${hotel.country}`,
+        data: hotel,
+      });
+    });
+
+    // Flights (limit to 5)
+    const flightMatches = allFlights.filter((flight) =>
+      flight.route.toLowerCase().includes(query) ||
+      flight.origin.toLowerCase().includes(query) ||
+      flight.destination.toLowerCase().includes(query) ||
+      flight.airline.toLowerCase().includes(query)
+    ).slice(0, 5);
+    
+    flightMatches.forEach((flight) => {
+      suggestions.push({
+        id: `flight-${flight.id}`,
+        type: 'flight',
+        title: flight.route,
+        subtitle: `${flight.airline} • ${flight.duration}`,
+        data: flight,
+      });
+    });
+
+    return suggestions;
+  }, [searchQuery, allHotels, allFlights]);
+
   const handleDestinationPress = (destination: any) => {
     navigation.navigate('CreateTrip', { destination: destination.destination });
   };
@@ -200,9 +286,25 @@ export default function ExploreScreen({ navigation }: ExploreScreenProps) {
     navigation.navigate('CreateTrip', { destination: flight.destination });
   };
 
+  const handleSuggestionPress = (suggestion: typeof searchSuggestions[0]) => {
+    setSearchQuery('');
+    if (suggestion.type === 'destination') {
+      handleDestinationPress(suggestion.data);
+    } else if (suggestion.type === 'hotel') {
+      handleHotelPress(suggestion.data);
+    } else if (suggestion.type === 'flight') {
+      handleFlightPress(suggestion.data);
+    }
+  };
+
+  const styles = createStyles(colors);
+
+  // Add extra padding on Android to match iOS safe area appearance
+  const statusBarHeight = Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 12 : 0;
+
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
+    <SafeAreaView style={[styles.safeArea, Platform.OS === 'android' && { paddingTop: statusBarHeight }]}>
+      <StatusBar barStyle={colors.mode === 'dark' ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
       <ScrollView
         style={styles.container}
         showsVerticalScrollIndicator={false}
@@ -216,19 +318,67 @@ export default function ExploreScreen({ navigation }: ExploreScreenProps) {
               <Text style={styles.subtitle}>Explore the world</Text>
             </View>
             <TouchableOpacity
-              style={styles.menuButton}
-              onPress={() => setDrawerVisible(true)}
+              style={styles.profileButton}
+              onPress={() => navigation.getParent()?.navigate('Profile')}
+              activeOpacity={0.7}
             >
-              <Text style={styles.menuIcon}>☰</Text>
+              <Ionicons name="person" size={20} color="#6B9BD5" />
             </TouchableOpacity>
           </View>
 
-          {/* Search Bar */}
-          <SearchBar
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            style={styles.searchBar}
-          />
+          {/* Search Bar with Settings */}
+          <View style={styles.searchContainer}>
+            <View style={styles.searchBarWrapper}>
+              <SearchBar
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                style={styles.searchBar}
+              />
+              <TouchableOpacity
+                style={styles.settingsButton}
+                onPress={() => navigation.navigate('Settings')}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="settings" size={20} color={colors.gray600} />
+              </TouchableOpacity>
+            </View>
+            
+            {/* Search Suggestions Dropdown */}
+            {searchQuery.length > 0 && searchSuggestions.length > 0 && (
+              <View style={styles.suggestionsContainer}>
+                <FlatList
+                  data={searchSuggestions}
+                  keyExtractor={(item) => item.id}
+                  renderItem={({ item }) => (
+                    <TouchableOpacity
+                      style={styles.suggestionItem}
+                      onPress={() => handleSuggestionPress(item)}
+                      activeOpacity={0.7}
+                    >
+                      <View style={styles.suggestionIcon}>
+                        {item.type === 'destination' && (
+                          <Ionicons name="location" size={20} color={colors.primary} />
+                        )}
+                        {item.type === 'hotel' && (
+                          <Ionicons name="bed" size={20} color={colors.primary} />
+                        )}
+                        {item.type === 'flight' && (
+                          <Ionicons name="airplane" size={20} color={colors.primary} />
+                        )}
+                      </View>
+                      <View style={styles.suggestionContent}>
+                        <Text style={styles.suggestionTitle}>{item.title}</Text>
+                        <Text style={styles.suggestionSubtitle}>{item.subtitle}</Text>
+                      </View>
+                      <Ionicons name="chevron-forward" size={16} color={colors.textLight} />
+                    </TouchableOpacity>
+                  )}
+                  ItemSeparatorComponent={() => <View style={styles.suggestionSeparator} />}
+                  scrollEnabled={false}
+                />
+              </View>
+            )}
+          </View>
         </View>
 
         {/* Create Trip Banner - Moved to top */}
@@ -250,12 +400,7 @@ export default function ExploreScreen({ navigation }: ExploreScreenProps) {
         </TouchableOpacity>
 
         {/* Categories */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.categoriesContainer}
-          contentContainerStyle={styles.categoriesContent}
-        >
+        <View style={styles.categoriesContainer}>
           {CATEGORIES.map((category) => (
             <CategoryChip
               key={category.id}
@@ -265,7 +410,7 @@ export default function ExploreScreen({ navigation }: ExploreScreenProps) {
               onPress={() => setSelectedCategory(category.id)}
             />
           ))}
-        </ScrollView>
+        </View>
 
         {/* Content based on selected category */}
         {selectedCategory === 'hotels' ? (
@@ -346,39 +491,6 @@ export default function ExploreScreen({ navigation }: ExploreScreenProps) {
               </View>
             )}
           </View>
-        ) : selectedCategory === 'popular' ? (
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Popular Destinations</Text>
-              <TouchableOpacity>
-                <Text style={styles.seeAll}>See all</Text>
-              </TouchableOpacity>
-            </View>
-
-            {popularDestinations.length > 0 ? (
-              <View style={styles.grid}>
-                {popularDestinations.map((destination) => (
-                  <DestinationCard
-                    key={destination.id}
-                    id={destination.id}
-                    destination={destination.destination}
-                    country={destination.country}
-                    price={destination.price}
-                    rating={destination.rating}
-                    imageUrl={destination.imageUrl}
-                    onPress={() => handleDestinationPress(destination)}
-                  />
-                ))}
-              </View>
-            ) : (
-              <View style={styles.emptyContainer}>
-                <Text style={styles.emptyText}>No popular destinations found</Text>
-                <Text style={styles.emptySubtext}>
-                  Try searching for a different location
-                </Text>
-              </View>
-            )}
-          </View>
         ) : (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
@@ -408,19 +520,11 @@ export default function ExploreScreen({ navigation }: ExploreScreenProps) {
         {/* Bottom spacing */}
         <View style={styles.bottomSpacing} />
       </ScrollView>
-
-      {/* Drawer Menu */}
-      <DrawerMenu
-        visible={drawerVisible}
-        onClose={() => setDrawerVisible(false)}
-        navigation={navigation}
-        userName={userName}
-      />
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: colors.background,
@@ -448,29 +552,85 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     marginTop: spacing.xs,
   },
-  menuButton: {
+  profileButton: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     justifyContent: 'center',
     alignItems: 'center',
     ...shadows.sm,
   },
-  menuIcon: {
-    fontSize: 24,
-    color: colors.textPrimary,
-    fontWeight: '600',
+  searchContainer: {
+    marginTop: spacing.md,
+    position: 'relative',
+    zIndex: 10,
+  },
+  searchBarWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   searchBar: {
-    marginTop: spacing.md,
+    flex: 1,
+  },
+  suggestionsContainer: {
+    marginTop: spacing.xs,
+    backgroundColor: colors.white,
+    borderRadius: borderRadius.xl,
+    maxHeight: 300,
+    ...shadows.md,
+    borderWidth: 1,
+    borderColor: colors.gray200,
+  },
+  suggestionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  suggestionIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.gray100,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: spacing.sm,
+  },
+  suggestionContent: {
+    flex: 1,
+  },
+  suggestionTitle: {
+    ...typography.body2,
+    color: colors.textPrimary,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  suggestionSubtitle: {
+    ...typography.caption,
+    color: colors.textSecondary,
+  },
+  suggestionSeparator: {
+    height: 1,
+    backgroundColor: colors.gray200,
+    marginHorizontal: spacing.md,
+  },
+  settingsButton: {
+    width: 48,
+    height: 48,
+    borderRadius: borderRadius.xl,
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: spacing.sm,
+    ...shadows.sm,
   },
   categoriesContainer: {
     marginTop: spacing.md,
-  },
-  categoriesContent: {
+    flexDirection: 'row',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
+    justifyContent: 'space-between',
   },
   section: {
     marginTop: spacing.lg,

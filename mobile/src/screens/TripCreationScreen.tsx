@@ -14,7 +14,8 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { tripService } from "../services/tripService";
 import { TravelPreferences } from "../types";
-import { colors, spacing, borderRadius, shadows, typography } from "../theme";
+import { spacing, borderRadius, shadows, typography } from "../theme";
+import { useTheme } from "../contexts/ThemeContext";
 import CategoryChip from "../components/CategoryChip";
 
 interface TripCreationScreenProps {
@@ -26,6 +27,7 @@ export default function TripCreationScreen({
   navigation,
   route,
 }: TripCreationScreenProps) {
+  const { colors } = useTheme();
   const [destination, setDestination] = useState(route?.params?.destination || "");
   const [budget, setBudget] = useState(1000);
   const [startDate, setStartDate] = useState("");
@@ -50,7 +52,7 @@ export default function TripCreationScreen({
   ];
   
   const foodOptions = [
-    { id: "local", label: "Local", icon: "🍜" },
+    { id: "local", label: "Local", icon: "🧁" },
     { id: "international", label: "International", icon: "🍕" },
     { id: "vegetarian", label: "Vegetarian", icon: "🥗" },
     { id: "vegan", label: "Vegan", icon: "🌱" },
@@ -154,9 +156,11 @@ export default function TripCreationScreen({
     }
   };
 
+  const styles = createStyles(colors);
+
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="dark-content" backgroundColor={colors.white} />
+      <StatusBar barStyle={colors.mode === 'dark' ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
       <ScrollView 
         style={styles.container}
         showsVerticalScrollIndicator={false}
@@ -260,6 +264,7 @@ export default function TripCreationScreen({
                   onPress={() =>
                     toggleSelection(option.id, activityType, setActivityType)
                   }
+                  variant="vertical"
                 />
               ))}
             </View>
@@ -279,6 +284,7 @@ export default function TripCreationScreen({
                   onPress={() =>
                     toggleSelection(option.id, foodPreference, setFoodPreference)
                   }
+                  variant="vertical"
                 />
               ))}
             </View>
@@ -302,6 +308,7 @@ export default function TripCreationScreen({
                       setTransportPreference
                     )
                   }
+                  variant="vertical"
                 />
               ))}
             </View>
@@ -372,7 +379,8 @@ export default function TripCreationScreen({
   );
 }
 
-const styles = StyleSheet.create({
+// Styles will be created inside component to access theme colors
+const createStyles = (colors: any) => StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: colors.background,
@@ -402,21 +410,26 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   card: {
-    backgroundColor: colors.white,
-    borderRadius: borderRadius.lg,
-    padding: spacing.lg,
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
     marginBottom: spacing.md,
-    ...shadows.sm,
+    borderWidth: 1,
+    borderColor: colors.gray200,
+    overflow: 'hidden',
   },
   cardLabel: {
     ...typography.h4,
     color: colors.textPrimary,
     marginBottom: spacing.xs,
+    fontSize: 16,
+    fontWeight: '600',
   },
   cardHint: {
     ...typography.caption,
     color: colors.textSecondary,
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
+    fontSize: 13,
   },
   input: {
     ...typography.body1,
@@ -501,6 +514,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.sm,
+    justifyContent: 'space-between',
   },
   scheduleButtons: {
     flexDirection: 'row',

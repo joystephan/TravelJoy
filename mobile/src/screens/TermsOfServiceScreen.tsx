@@ -5,8 +5,10 @@ import {
   StyleSheet,
   SafeAreaView,
   ScrollView,
+  StatusBar,
 } from "react-native";
-import { colors, spacing, typography } from "../theme";
+import { spacing, typography } from "../theme";
+import { useTheme } from "../contexts/ThemeContext";
 
 interface TermsOfServiceScreenProps {
   navigation: any;
@@ -15,8 +17,12 @@ interface TermsOfServiceScreenProps {
 export default function TermsOfServiceScreen({
   navigation,
 }: TermsOfServiceScreenProps) {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
+
   return (
     <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle={colors.mode === 'dark' ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <Text style={styles.title}>Terms of Service</Text>
@@ -118,7 +124,7 @@ export default function TermsOfServiceScreen({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: colors.background,

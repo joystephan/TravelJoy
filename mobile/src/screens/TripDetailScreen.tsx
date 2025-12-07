@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   View,
   Text,
@@ -19,9 +19,18 @@ import WeatherWidget from "../components/WeatherWidget";
 import ActivityCard from "../components/ActivityCard";
 import MapComponent from "../components/MapComponent";
 import LocationMapModal from "../components/LocationMapModal";
-import { colors, spacing, borderRadius, shadows, typography } from "../theme";
+import { spacing, borderRadius, shadows, typography } from "../theme";
+import { useTheme } from "../contexts/ThemeContext";
+import { geocodeDestination, getDefaultCoordinatesForDestination } from "../utils/geocoding";
 
 const { width } = Dimensions.get('window');
+
+// Helper function to remove "- Day X" suffix from names
+const cleanName = (name: string): string => {
+  if (!name) return name;
+  // Remove patterns like " - Day 1", " - Day 2", etc.
+  return name.replace(/\s*-\s*Day\s+\d+\s*$/i, '').trim();
+};
 
 interface TripDetailScreenProps {
   route: any;
@@ -32,16 +41,22 @@ export default function TripDetailScreen({
   route,
   navigation,
 }: TripDetailScreenProps) {
+  const { colors } = useTheme();
   const { tripId } = route.params;
   const [trip, setTrip] = useState<Trip | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedDay, setSelectedDay] = useState(0);
+  const [dayChangeKey, setDayChangeKey] = useState(0); // Force re-render when day changes
   const [refreshing, setRefreshing] = useState(false);
   const [mapModalVisible, setMapModalVisible] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<{
     latitude: number;
     longitude: number;
     name: string;
+  } | null>(null);
+  const [destinationCoordinates, setDestinationCoordinates] = useState<{
+    latitude: number;
+    longitude: number;
   } | null>(null);
 
   useEffect(() => {
@@ -50,26 +65,33 @@ export default function TripDetailScreen({
 
   // Auto-refresh when trip is being generated
   useEffect(() => {
-    // Only poll if trip exists and status is "generating"
-    if (!trip || trip.status !== "generating") {
+    // Only poll if trip exists and status indicates generation in progress
+    const isGenerating = trip?.status === "generating" || trip?.status === "pending";
+    if (!trip || !isGenerating) {
       return;
     }
 
-    // Poll every 3 seconds
+    // Poll every 2 seconds for faster updates
     const pollInterval = setInterval(async () => {
       try {
         const tripData = await tripService.getTripById(tripId);
+        console.log('Polling trip update:', {
+          status: tripData.status,
+          dailyPlansCount: tripData.dailyPlans?.length || 0,
+        });
         setTrip(tripData);
         
-        // Stop polling if trip is completed or failed
-        if (tripData.status === "completed" || tripData.status === "failed") {
+        // Stop polling if trip is completed, failed, or has daily plans
+        if (tripData.status === "completed" || 
+            tripData.status === "failed" ||
+            (tripData.dailyPlans && tripData.dailyPlans.length > 0)) {
           clearInterval(pollInterval);
         }
       } catch (error) {
         // Silently fail during polling - don't show errors
         console.error("Polling error:", error);
       }
-    }, 3000); // Poll every 3 seconds
+    }, 2000); // Poll every 2 seconds for faster updates
 
     // Cleanup interval on unmount or when trip status changes
     return () => {
@@ -77,14 +99,188 @@ export default function TripDetailScreen({
     };
   }, [trip?.status, tripId]);
 
+  // Ensure selectedDay is within bounds and reset if needed
+  // This must be before any conditional returns to follow Rules of Hooks
+  useEffect(() => {
+    if (trip?.dailyPlans && Array.isArray(trip.dailyPlans) && trip.dailyPlans.length > 0) {
+      if (selectedDay >= trip.dailyPlans.length) {
+        console.log('Resetting selectedDay from', selectedDay, 'to 0 (dailyPlans length:', trip.dailyPlans.length, ')');
+        setSelectedDay(0);
+      }
+    }
+  }, [trip?.dailyPlans?.length, selectedDay]);
+
+  // Check if trip has daily plans - must be before any conditional returns
+  const hasDailyPlans = trip?.dailyPlans && Array.isArray(trip.dailyPlans) && trip.dailyPlans.length > 0;
+  
+  // Ensure we have a valid day plan for the selected day
+  // Use useMemo to ensure it recalculates when selectedDay or trip changes
+  // MUST be before any conditional returns to follow Rules of Hooks
+  const safeSelectedDay = useMemo(() => {
+    if (!hasDailyPlans || !trip) return 0;
+    return selectedDay < trip.dailyPlans.length ? selectedDay : 0;
+  }, [hasDailyPlans, selectedDay, trip?.dailyPlans?.length]);
+  
+  const currentDayPlan = useMemo(() => {
+    if (!hasDailyPlans || !trip || safeSelectedDay >= trip.dailyPlans.length) {
+      return null;
+    }
+    const plan = trip.dailyPlans[safeSelectedDay];
+    console.log('Current Day Plan (useMemo):', {
+      selectedDay,
+      safeSelectedDay,
+      planId: plan?.id,
+      planDate: plan?.date,
+      activitiesCount: plan?.activities?.length || 0,
+      mealsCount: plan?.meals?.length || 0,
+      transportationsCount: plan?.transportations?.length || 0,
+    });
+    return plan || null;
+  }, [hasDailyPlans, trip, safeSelectedDay, selectedDay]);
+  
+  // Get activities for the current day only - use useMemo to ensure they update when day changes
+  const currentDayActivities = useMemo(() => {
+    if (!currentDayPlan) return [];
+    const activities = currentDayPlan.activities || [];
+    // Create a completely new array with new object references to force React to see them as different
+    const newActivities = activities.map((a: any) => ({
+      ...a,
+      name: cleanName(a.name || a.title || ''),
+      _dayKey: `${selectedDay}-${currentDayPlan.id}`, // Add a unique key per day
+    }));
+    console.log('currentDayActivities memoized:', {
+      selectedDay,
+      planId: currentDayPlan.id,
+      activitiesCount: newActivities.length,
+      activityNames: newActivities.map((a: any) => a.name || a.title || 'unnamed'),
+      activityIds: newActivities.map((a: any) => a.id),
+      fullActivities: newActivities.map((a: any) => ({
+        id: a.id,
+        name: a.name || a.title,
+        description: a.description,
+        cost: a.cost,
+        _dayKey: a._dayKey,
+      })),
+    });
+    return newActivities;
+  }, [currentDayPlan, selectedDay]);
+  
+  const currentDayMeals = useMemo(() => {
+    if (!currentDayPlan) return [];
+    const meals = currentDayPlan.meals || [];
+    // Create a completely new array with new object references
+    const newMeals = meals.map((m: any) => ({
+      ...m,
+      name: cleanName(m.name || m.restaurantName || ''),
+      _dayKey: `${selectedDay}-${currentDayPlan.id}`,
+    }));
+    console.log('currentDayMeals memoized:', {
+      selectedDay,
+      planId: currentDayPlan.id,
+      mealsCount: newMeals.length,
+      mealNames: newMeals.map((m: any) => m.name || m.restaurantName || 'unnamed'),
+      mealIds: newMeals.map((m: any) => m.id),
+    });
+    return newMeals;
+  }, [currentDayPlan, selectedDay]);
+  
+  const currentDayTransportations = useMemo(() => {
+    if (!currentDayPlan) return [];
+    const transportations = currentDayPlan.transportations || [];
+    // Create a completely new array with new object references
+    const newTransportations = transportations.map((t: any) => ({
+      ...t,
+      _dayKey: `${selectedDay}-${currentDayPlan.id}`,
+    }));
+    console.log('currentDayTransportations memoized:', {
+      selectedDay,
+      planId: currentDayPlan.id,
+      transportationsCount: newTransportations.length,
+      transportIds: newTransportations.map((t: any) => t.id),
+    });
+    return newTransportations;
+  }, [currentDayPlan, selectedDay]);
+  
+  // Debug logging when selectedDay changes
+  useEffect(() => {
+    if (trip && hasDailyPlans && currentDayPlan) {
+      console.log('Day changed:', {
+        selectedDay,
+        safeSelectedDay,
+        dayPlanId: currentDayPlan.id,
+        dayPlanDate: currentDayPlan.date,
+        activitiesCount: currentDayActivities.length,
+        mealsCount: currentDayMeals.length,
+        transportationsCount: currentDayTransportations.length,
+        firstActivity: currentDayActivities[0]?.name || currentDayActivities[0]?.title || 'none',
+        firstMeal: currentDayMeals[0]?.name || currentDayMeals[0]?.restaurantName || 'none',
+        allActivityNames: currentDayActivities.map((a: any) => a.name || a.title || 'unnamed'),
+      });
+    }
+  }, [selectedDay, trip?.id, currentDayPlan?.id]);
+
   const loadTrip = async (showLoading = true) => {
     try {
       if (showLoading) {
         setLoading(true);
       }
       const tripData = await tripService.getTripById(tripId);
+      console.log('Trip loaded:', {
+        id: tripData.id,
+        destination: tripData.destination,
+        status: tripData.status,
+        dailyPlansCount: tripData.dailyPlans?.length || 0,
+        hasDailyPlans: !!tripData.dailyPlans,
+        dailyPlansType: Array.isArray(tripData.dailyPlans) ? 'array' : typeof tripData.dailyPlans,
+        firstDailyPlan: tripData.dailyPlans?.[0] ? {
+          id: tripData.dailyPlans[0].id,
+          date: tripData.dailyPlans[0].date,
+          activitiesCount: tripData.dailyPlans[0].activities?.length || 0,
+          mealsCount: tripData.dailyPlans[0].meals?.length || 0,
+          transportationsCount: tripData.dailyPlans[0].transportations?.length || 0,
+        } : null,
+      });
+      
+      // Log all daily plans to check if they have different data
+      if (tripData.dailyPlans && Array.isArray(tripData.dailyPlans)) {
+        console.log('All Daily Plans Summary:');
+        tripData.dailyPlans.forEach((plan: any, index: number) => {
+          console.log(`Day ${index + 1}:`, {
+            id: plan.id,
+            date: plan.date,
+            activities: plan.activities?.map((a: any) => a.name || a.title) || [],
+            meals: plan.meals?.map((m: any) => m.name || m.restaurantName) || [],
+            transportations: plan.transportations?.map((t: any) => t.type || t.mode) || [],
+          });
+        });
+      }
+      
       setTrip(tripData);
+      
+      // Fetch destination coordinates for the map
+      if (tripData.destination) {
+        try {
+          const coords = await geocodeDestination(tripData.destination);
+          if (coords) {
+            setDestinationCoordinates(coords);
+          } else {
+            // Try fallback for common destinations
+            const fallbackCoords = getDefaultCoordinatesForDestination(tripData.destination);
+            if (fallbackCoords) {
+              setDestinationCoordinates(fallbackCoords);
+            }
+          }
+        } catch (error) {
+          console.warn('Failed to geocode destination:', error);
+          // Try fallback
+          const fallbackCoords = getDefaultCoordinatesForDestination(tripData.destination);
+          if (fallbackCoords) {
+            setDestinationCoordinates(fallbackCoords);
+          }
+        }
+      }
     } catch (error: any) {
+      console.error('Failed to load trip:', error);
       Alert.alert("Error", error.message || "Failed to load trip");
       navigation.goBack();
     } finally {
@@ -161,6 +357,8 @@ export default function TripDetailScreen({
     });
   };
 
+  const styles = createStyles(colors);
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -170,22 +368,40 @@ export default function TripDetailScreen({
     );
   }
 
-  if (!trip || !trip.dailyPlans || trip.dailyPlans.length === 0) {
+  // Debug logging
+  if (trip && hasDailyPlans && !currentDayPlan) {
+    console.log('Debug: currentDayPlan is null', {
+      selectedDay,
+      dailyPlansLength: trip.dailyPlans.length,
+      dailyPlansArray: trip.dailyPlans.map((dp: any, idx: number) => ({
+        index: idx,
+        id: dp.id,
+        date: dp.date,
+        hasActivities: !!dp.activities,
+        activitiesCount: dp.activities?.length || 0,
+      })),
+    });
+  }
+  
+  if (!trip || !hasDailyPlans || !currentDayPlan) {
     return (
       <View style={styles.emptyContainer}>
         <Text style={styles.emptyEmoji}>✈️</Text>
         <Text style={styles.emptyText}>
-          {trip?.status === "generating"
+          {trip?.status === "generating" || trip?.status === "pending"
             ? "Your itinerary is being generated..."
             : trip?.status === "failed"
             ? "Failed to generate itinerary. Please try again."
             : "No itinerary available"}
         </Text>
-        {trip?.status === "generating" && (
+        {(trip?.status === "generating" || trip?.status === "pending") && (
           <View style={styles.pollingIndicator}>
-            <ActivityIndicator size="small" color={colors.primary} />
+            <ActivityIndicator size="large" color={colors.primary} />
             <Text style={styles.pollingText}>
-              Checking for updates automatically...
+              Creating your perfect itinerary...
+            </Text>
+            <Text style={styles.pollingSubtext}>
+              This usually takes 10-15 seconds
             </Text>
           </View>
         )}
@@ -203,10 +419,6 @@ export default function TripDetailScreen({
       </View>
     );
   }
-
-  const currentDayPlan = trip.dailyPlans[selectedDay];
-  const allActivities = trip.dailyPlans.flatMap((dp) => dp.activities);
-  const currentDayActivities = currentDayPlan.activities;
 
   const openMapModal = (location: { latitude: number; longitude: number; name: string }) => {
     setSelectedLocation(location);
@@ -251,8 +463,12 @@ export default function TripDetailScreen({
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="light-content" backgroundColor={colors.primary} />
-      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+      <StatusBar barStyle={colors.mode === 'dark' ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
+      <ScrollView 
+        key={`day-${selectedDay}-${currentDayPlan?.id || 'none'}-${dayChangeKey}`}
+        style={styles.container} 
+        showsVerticalScrollIndicator={false}
+      >
         {/* Hero Section with Map */}
         <View style={styles.hero}>
           {/* Real Map */}
@@ -263,12 +479,18 @@ export default function TripDetailScreen({
                 longitude: activity.longitude,
                 name: activity.name,
               }))}
+              initialRegion={destinationCoordinates ? {
+                latitude: destinationCoordinates.latitude,
+                longitude: destinationCoordinates.longitude,
+                latitudeDelta: 0.1,
+                longitudeDelta: 0.1,
+              } : undefined}
               style={styles.mapComponent}
             />
           </View>
 
           {/* Gradient Overlay */}
-          <View style={styles.heroOverlay} />
+          <View style={[styles.heroOverlay, { backgroundColor: colors.mode === 'dark' ? 'rgba(0, 0, 0, 0.6)' : 'rgba(0, 0, 0, 0.3)' }]} />
 
           {/* Trip Header */}
           <View style={styles.heroContent}>
@@ -323,7 +545,10 @@ export default function TripDetailScreen({
                   styles.dayButton,
                   selectedDay === index && styles.dayButtonSelected,
                 ]}
-                onPress={() => setSelectedDay(index)}
+                onPress={() => {
+                  setSelectedDay(index);
+                  setDayChangeKey(prev => prev + 1); // Force re-render
+                }}
                 activeOpacity={0.7}
               >
                 <Text
@@ -350,57 +575,67 @@ export default function TripDetailScreen({
           </ScrollView>
         </View>
 
-        {/* Daily Budget Banner */}
-        <View style={styles.budgetBanner}>
-          <View style={styles.budgetContent}>
-            <Text style={styles.budgetLabel}>Daily Budget</Text>
-            <Text style={styles.budgetAmount}>
-              ${currentDayPlan.estimatedCost.toFixed(2)}
-            </Text>
+        {/* Content Wrapper - Force complete remount when day changes */}
+        <View key={`day-content-${selectedDay}-${currentDayPlan?.id}-${dayChangeKey}`}>
+          {/* Daily Budget Banner */}
+          <View style={styles.budgetBanner}>
+            <View style={styles.budgetContent}>
+              <Text style={styles.budgetLabel}>Daily Budget</Text>
+              <Text style={styles.budgetAmount}>
+                ${currentDayPlan.estimatedCost.toFixed(2)}
+              </Text>
+            </View>
+            <View style={styles.budgetProgress}>
+              <View
+                style={[
+                  styles.budgetProgressFill,
+                  {
+                    width: `${Math.min(
+                      (currentDayPlan.estimatedCost / (trip.budget / trip.dailyPlans.length)) * 100,
+                      100
+                    )}%`,
+                  },
+                ]}
+              />
+            </View>
           </View>
-          <View style={styles.budgetProgress}>
-            <View
-              style={[
-                styles.budgetProgressFill,
-                {
-                  width: `${Math.min(
-                    (currentDayPlan.estimatedCost / (trip.budget / trip.dailyPlans.length)) * 100,
-                    100
-                  )}%`,
-                },
-              ]}
-            />
-          </View>
-        </View>
 
-        {/* Activities Section */}
-        {currentDayPlan.activities.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>🎯 Activities</Text>
-            {currentDayPlan.activities.map((activity, index) => (
-              <View key={activity.id}>
-                <ActivityCard
-                  activity={activity}
-                  onEdit={() => handleEditActivity(activity)}
-                  onDelete={() => handleDeleteActivity(activity.id)}
-                />
-                {index < currentDayPlan.activities.length - 1 && (
-                  <View style={styles.timelineDivider}>
-                    <View style={styles.timelineDot} />
-                    <View style={styles.timelineLine} />
+          {/* Activities Section */}
+          {currentDayActivities.length > 0 && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>🎯 Activities</Text>
+              {currentDayActivities.map((activity, index) => {
+                // Create a unique key that includes all relevant identifiers
+                const uniqueKey = `activity-${selectedDay}-${currentDayPlan?.id}-${activity.id}-${dayChangeKey}-${index}`;
+                return (
+                  <View key={uniqueKey}>
+                    <ActivityCard
+                      key={`card-${uniqueKey}`}
+                      activity={activity}
+                      onEdit={() => handleEditActivity(activity)}
+                      onDelete={() => handleDeleteActivity(activity.id)}
+                      renderKey={`${selectedDay}-${currentDayPlan?.id}-${activity.id}-${dayChangeKey}`}
+                    />
+                    {index < currentDayActivities.length - 1 && (
+                      <View style={styles.timelineDivider} key={`divider-${uniqueKey}`}>
+                        <View style={styles.timelineDot} />
+                        <View style={styles.timelineLine} />
+                      </View>
+                    )}
                   </View>
-                )}
-              </View>
-            ))}
-          </View>
-        )}
+                );
+              })}
+            </View>
+          )}
 
-        {/* Meals Section */}
-        {currentDayPlan.meals.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>🍽️ Meals</Text>
-            {currentDayPlan.meals.map((meal) => (
-              <View key={meal.id} style={styles.mealCard}>
+          {/* Meals Section */}
+          {currentDayMeals.length > 0 && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>🍽️ Meals</Text>
+              {currentDayMeals.map((meal, mealIndex) => {
+                const mealUniqueKey = `meal-${selectedDay}-${currentDayPlan?.id}-${meal.id}-${dayChangeKey}-${mealIndex}`;
+                return (
+                  <View key={mealUniqueKey} style={styles.mealCard}>
                 <View style={styles.mealHeader}>
                   <View style={styles.mealInfo}>
                     <View style={styles.mealNameRow}>
@@ -442,16 +677,19 @@ export default function TripDetailScreen({
                   </TouchableOpacity>
                 </View>
               </View>
-            ))}
-          </View>
-        )}
+                );
+              })}
+            </View>
+          )}
 
-        {/* Transportation Section */}
-        {currentDayPlan.transportations.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>🚗 Transportation</Text>
-            {currentDayPlan.transportations.map((transport) => (
-              <View key={transport.id} style={styles.transportCard}>
+          {/* Transportation Section */}
+          {currentDayTransportations.length > 0 && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>🚗 Transportation</Text>
+              {currentDayTransportations.map((transport, transportIndex) => {
+                const transportUniqueKey = `transport-${selectedDay}-${currentDayPlan?.id}-${transport.id}-${dayChangeKey}-${transportIndex}`;
+                return (
+                  <View key={transportUniqueKey} style={styles.transportCard}>
                 <View style={styles.transportHeader}>
                   <View style={styles.transportMode}>
                     <Text style={styles.transportModeIcon}>
@@ -494,26 +732,31 @@ export default function TripDetailScreen({
                   {transport.duration} minutes
                 </Text>
               </View>
-            ))}
-          </View>
-        )}
+                );
+              })}
+            </View>
+          )}
+        </View>
 
         <View style={styles.bottomSpacing} />
       </ScrollView>
 
-      {selectedLocation && (
+      {selectedLocation && trip && (
         <LocationMapModal
           visible={mapModalVisible}
           onClose={closeMapModal}
-          location={selectedLocation}
-          onGetDirections={() => getDirections(selectedLocation.latitude, selectedLocation.longitude)}
+          location={selectedLocation || { latitude: 0, longitude: 0, name: '' }}
+          destination={trip.destination || undefined}
+          onGetDirections={(latitude, longitude) => {
+            getDirections(latitude, longitude);
+          }}
         />
       )}
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: colors.background,
@@ -561,23 +804,31 @@ const styles = StyleSheet.create({
     color: colors.white,
   },
   pollingIndicator: {
-    flexDirection: "row",
+    marginTop: spacing.xl,
     alignItems: "center",
-    justifyContent: "center",
-    marginBottom: spacing.md,
+    padding: spacing.lg,
   },
   pollingText: {
-    ...typography.caption,
+    ...typography.h4,
+    color: colors.textPrimary,
+    marginTop: spacing.md,
+    fontWeight: "600",
+    textAlign: "center",
+  },
+  pollingSubtext: {
+    ...typography.body2,
     color: colors.textSecondary,
-    marginLeft: spacing.sm,
+    marginTop: spacing.xs,
+    textAlign: "center",
   },
   hero: {
     height: 300,
     position: 'relative',
+    marginBottom: spacing.md,
   },
   map: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
   },
   mapComponent: {
     width: '100%',
@@ -585,7 +836,7 @@ const styles = StyleSheet.create({
   },
   heroOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    backgroundColor: 'rgba(0, 0, 0, 0.3)', // Default, will be overridden dynamically
   },
   heroContent: {
     ...StyleSheet.absoluteFillObject,
@@ -596,7 +847,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     justifyContent: 'center',
     alignItems: 'center',
     ...shadows.md,
@@ -612,9 +863,9 @@ const styles = StyleSheet.create({
     ...typography.display1,
     color: colors.white,
     marginBottom: spacing.sm,
-    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowColor: colors.mode === 'dark' ? 'rgba(0, 0, 0, 0.8)' : 'rgba(0, 0, 0, 0.3)',
     textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
+    textShadowRadius: colors.mode === 'dark' ? 6 : 4,
   },
   tripMeta: {
     flexDirection: 'row',
@@ -632,6 +883,9 @@ const styles = StyleSheet.create({
     ...typography.body1,
     color: colors.white,
     fontWeight: '600',
+    textShadowColor: colors.mode === 'dark' ? 'rgba(0, 0, 0, 0.8)' : 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   metaDivider: {
     width: 1,
@@ -646,7 +900,7 @@ const styles = StyleSheet.create({
     right: spacing.md,
   },
   daySelectorWrapper: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     paddingVertical: spacing.sm,
     borderBottomWidth: 1,
     borderBottomColor: colors.gray200,
@@ -685,9 +939,11 @@ const styles = StyleSheet.create({
     opacity: 0.9,
   },
   budgetBanner: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     margin: spacing.md,
     padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.gray200,
     borderRadius: borderRadius.lg,
     ...shadows.sm,
   },
@@ -744,9 +1000,11 @@ const styles = StyleSheet.create({
     marginLeft: spacing.xs,
   },
   mealCard: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     borderRadius: borderRadius.lg,
     padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.gray200,
     marginBottom: spacing.sm,
     ...shadows.sm,
   },
@@ -842,11 +1100,12 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   transportCard: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     borderRadius: borderRadius.lg,
     padding: spacing.md,
     marginBottom: spacing.sm,
-    ...shadows.sm,
+    borderWidth: 1,
+    borderColor: colors.gray200,
   },
   transportHeader: {
     flexDirection: 'row',

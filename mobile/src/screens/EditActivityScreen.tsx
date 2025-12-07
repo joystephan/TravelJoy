@@ -8,10 +8,13 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
+  StatusBar,
+  SafeAreaView,
 } from "react-native";
 import { tripService } from "../services/tripService";
 import { Activity } from "../types";
-import { colors, typography, spacing, borderRadius, shadows } from "../theme";
+import { typography, spacing, borderRadius, shadows } from "../theme";
+import { useTheme } from "../contexts/ThemeContext";
 
 interface EditActivityScreenProps {
   route: any;
@@ -22,6 +25,7 @@ export default function EditActivityScreen({
   route,
   navigation,
 }: EditActivityScreenProps) {
+  const { colors } = useTheme();
   const { activity, onSave } = route.params;
 
   const [name, setName] = useState(activity.name);
@@ -87,16 +91,21 @@ export default function EditActivityScreen({
     }
   };
 
+  const styles = createStyles(colors);
+
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.content}>
-        <Text style={styles.title}>Edit Activity</Text>
+    <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle={colors.mode === 'dark' ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
+      <ScrollView style={styles.container}>
+        <View style={styles.content}>
+          <Text style={styles.title}>Edit Activity</Text>
 
         <View style={styles.section}>
           <Text style={styles.label}>Activity Name</Text>
           <TextInput
             style={styles.input}
             placeholder="e.g., Visit Eiffel Tower"
+            placeholderTextColor={colors.textLight}
             value={name}
             onChangeText={setName}
           />
@@ -107,6 +116,7 @@ export default function EditActivityScreen({
           <TextInput
             style={[styles.input, styles.textArea]}
             placeholder="Add details about this activity..."
+            placeholderTextColor={colors.textLight}
             value={description}
             onChangeText={setDescription}
             multiline
@@ -119,6 +129,7 @@ export default function EditActivityScreen({
           <TextInput
             style={styles.input}
             placeholder="120"
+            placeholderTextColor={colors.textLight}
             value={duration}
             onChangeText={setDuration}
             keyboardType="numeric"
@@ -130,6 +141,7 @@ export default function EditActivityScreen({
           <TextInput
             style={styles.input}
             placeholder="25.00"
+            placeholderTextColor={colors.textLight}
             value={cost}
             onChangeText={setCost}
             keyboardType="decimal-pad"
@@ -179,12 +191,17 @@ export default function EditActivityScreen({
         >
           <Text style={styles.cancelButtonText}>Cancel</Text>
         </TouchableOpacity>
-      </View>
-    </ScrollView>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
   container: {
     flex: 1,
     backgroundColor: colors.background,
@@ -206,7 +223,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   input: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     borderRadius: borderRadius.md,
     padding: spacing.md,
     ...typography.body1,
@@ -224,7 +241,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   categoryButton: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     borderRadius: borderRadius.xl,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,
@@ -267,7 +284,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   cancelButton: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     borderRadius: borderRadius.lg,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.xl,

@@ -8,10 +8,13 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
+  StatusBar,
+  SafeAreaView,
 } from "react-native";
 import { tripService } from "../services/tripService";
 import { Meal } from "../types";
-import { colors, typography, spacing, borderRadius, shadows } from "../theme";
+import { typography, spacing, borderRadius, shadows } from "../theme";
+import { useTheme } from "../contexts/ThemeContext";
 
 interface EditMealScreenProps {
   route: any;
@@ -22,6 +25,7 @@ export default function EditMealScreen({
   route,
   navigation,
 }: EditMealScreenProps) {
+  const { colors } = useTheme();
   const { meal, onSave } = route.params;
 
   const [name, setName] = useState(meal.name);
@@ -74,16 +78,21 @@ export default function EditMealScreen({
     }
   };
 
+  const styles = createStyles(colors);
+
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.content}>
-        <Text style={styles.title}>Edit Meal</Text>
+    <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle={colors.mode === 'dark' ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
+      <ScrollView style={styles.container}>
+        <View style={styles.content}>
+          <Text style={styles.title}>Edit Meal</Text>
 
         <View style={styles.section}>
           <Text style={styles.label}>Meal Name</Text>
           <TextInput
             style={styles.input}
             placeholder="e.g., Café du Matin"
+            placeholderTextColor={colors.textLight}
             value={name}
             onChangeText={setName}
           />
@@ -119,6 +128,7 @@ export default function EditMealScreen({
           <TextInput
             style={styles.input}
             placeholder="25.00"
+            placeholderTextColor={colors.textLight}
             value={cost}
             onChangeText={setCost}
             keyboardType="decimal-pad"
@@ -168,12 +178,17 @@ export default function EditMealScreen({
         >
           <Text style={styles.cancelButtonText}>Cancel</Text>
         </TouchableOpacity>
-      </View>
-    </ScrollView>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
   container: {
     flex: 1,
     backgroundColor: colors.background,
@@ -195,7 +210,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   input: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     borderRadius: borderRadius.md,
     padding: spacing.md,
     ...typography.body1,
@@ -209,7 +224,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   categoryButton: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     borderRadius: borderRadius.xl,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,
@@ -252,7 +267,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   cancelButton: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     borderRadius: borderRadius.lg,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.xl,

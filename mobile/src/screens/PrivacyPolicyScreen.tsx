@@ -5,8 +5,10 @@ import {
   StyleSheet,
   SafeAreaView,
   ScrollView,
+  StatusBar,
 } from "react-native";
-import { colors, spacing, typography } from "../theme";
+import { spacing, typography } from "../theme";
+import { useTheme } from "../contexts/ThemeContext";
 
 interface PrivacyPolicyScreenProps {
   navigation: any;
@@ -15,8 +17,12 @@ interface PrivacyPolicyScreenProps {
 export default function PrivacyPolicyScreen({
   navigation,
 }: PrivacyPolicyScreenProps) {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
+
   return (
     <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle={colors.mode === 'dark' ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <Text style={styles.title}>Privacy Policy</Text>
@@ -147,7 +153,7 @@ export default function PrivacyPolicyScreen({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: colors.background,

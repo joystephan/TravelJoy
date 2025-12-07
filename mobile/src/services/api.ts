@@ -77,10 +77,15 @@ apiClient.interceptors.response.use(
       const isOptionalEndpoint = originalRequest?.url?.includes("/weather") || 
                                  originalRequest?.url?.includes("/hotels");
       const is404 = error.response.status === 404;
+      const is401 = error.response.status === 401; // Authentication errors
       
       if (isOptionalEndpoint && is404) {
         // Silently handle 404s for optional endpoints - they're expected
         // The calling service will handle the fallback
+      } else if (is401) {
+        // For 401 errors (authentication failures), log minimal info
+        // The user-facing error message is handled by the calling component
+        console.warn("Authentication failed:", originalRequest?.url);
       } else {
         // Server responded with error status
         console.error("=== API ERROR (Server Response) ===");
@@ -95,19 +100,25 @@ apiClient.interceptors.response.use(
       }
     } else if (error.request) {
       // Request made but no response received
-      console.error("❌ === NETWORK ERROR (No Response) ===");
-      console.error("🔗 URL:", originalRequest?.method?.toUpperCase(), originalRequest?.url);
-      console.error("🌐 Full URL:", `${API_BASE_URL}${originalRequest?.url}`);
-      console.error("📍 Base URL:", API_BASE_URL);
-      console.error("⚠️  This usually means:");
-      console.error("   1. Backend server is not running");
-      console.error("   2. Wrong API URL (localhost won't work on physical devices)");
-      console.error("   3. Network/firewall blocking the connection");
-      console.error("💡 Solution: Set EXPO_PUBLIC_API_URL in .env to your computer's IP");
-      console.error("   Example: EXPO_PUBLIC_API_URL=http://192.168.16.108:3000");
-      console.error("Error Code:", error.code);
-      console.error("Error Message:", error.message);
-      console.error("===================================");
+      // Skip logging for optional endpoints (weather, hotels) - they're expected to fail sometimes
+      const isOptionalEndpoint = originalRequest?.url?.includes("/weather") || 
+                                 originalRequest?.url?.includes("/hotels");
+      
+      if (!isOptionalEndpoint) {
+        console.error("❌ === NETWORK ERROR (No Response) ===");
+        console.error("🔗 URL:", originalRequest?.method?.toUpperCase(), originalRequest?.url);
+        console.error("🌐 Full URL:", `${API_BASE_URL}${originalRequest?.url}`);
+        console.error("📍 Base URL:", API_BASE_URL);
+        console.error("⚠️  This usually means:");
+        console.error("   1. Backend server is not running");
+        console.error("   2. Wrong API URL (localhost won't work on physical devices)");
+        console.error("   3. Network/firewall blocking the connection");
+        console.error("💡 Solution: Set EXPO_PUBLIC_API_URL in .env to your computer's IP");
+        console.error("   Example: EXPO_PUBLIC_API_URL=http://192.168.16.108:3000");
+        console.error("Error Code:", error.code);
+        console.error("Error Message:", error.message);
+        console.error("===================================");
+      }
     } else {
       // Error setting up the request
       console.error("=== REQUEST SETUP ERROR ===");
@@ -126,14 +137,20 @@ apiClient.interceptors.response.use(
     // Parse error
     const apiError = parseAPIError(error);
 
-    // Skip logging for 404 errors on optional endpoints (weather, hotels, etc.)
+    // Skip logging for 404 errors and network errors on optional endpoints (weather, hotels, etc.)
+    // Also skip verbose logging for 401 authentication errors (they're expected user errors)
     const isOptionalEndpoint = originalRequest?.url?.includes("/weather") || 
                                originalRequest?.url?.includes("/hotels");
     const is404 = error.response?.status === 404;
+    const is401 = error.response?.status === 401;
+    const isNetworkError = !error.response && error.request; // Network error (no response)
     
-    if (!(isOptionalEndpoint && is404)) {
-      // Only log non-optional endpoint errors
-      console.error("Request failed:", {
+    // Don't log errors that would show up on user screens
+    // Only log to console for debugging, not for user display
+    if (!(isOptionalEndpoint && (is404 || isNetworkError)) && !is401) {
+      // Only log non-optional endpoint errors and non-authentication errors
+      // Use console.warn instead of console.error to avoid triggering error overlays
+      console.warn("Request failed:", {
         code: apiError.code,
         error: apiError.message,
         method: originalRequest?.method,
@@ -144,8 +161,9 @@ apiClient.interceptors.response.use(
 
     // Don't retry 4xx errors (client errors like validation, not found, etc.)
     // Only retry network errors and 5xx server errors
+    // Also skip retries for optional endpoints (hotels, weather) - they have fallbacks
     const isClientError = error.response?.status && error.response.status >= 400 && error.response.status < 500;
-    const maxRetries = 3;
+    const maxRetries = isOptionalEndpoint ? 1 : 3; // Only 1 retry for optional endpoints
     
     // Retry logic for retryable errors (only network errors and server errors)
     if (!isClientError && isRetryableError(apiError) && originalRequest) {
@@ -168,9 +186,10 @@ apiClient.interceptors.response.use(
     // Log final error if all retries exhausted or non-retryable error
     // (Already logged above, but this is for retry exhaustion cases)
     if ((originalRequest?._retry && originalRequest._retry >= maxRetries) || isClientError) {
-      // Skip logging for 404 errors on optional endpoints (already handled above)
-      if (!(isOptionalEndpoint && is404)) {
-        console.error("Request failed:", {
+      // Skip logging for 404 errors on optional endpoints and 401 auth errors (already handled above)
+      if (!(isOptionalEndpoint && is404) && !is401) {
+        // Use console.warn instead of console.error to avoid triggering error overlays
+        console.warn("Request failed:", {
           url: originalRequest?.url,
           method: originalRequest?.method,
           error: apiError.message,

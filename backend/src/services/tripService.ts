@@ -189,10 +189,10 @@ class TripService {
             dailyPlanId: dailyPlan.id,
             fromLocation: transport.from,
             toLocation: transport.to,
-            fromLatitude: 0, // Default values, can be enhanced
-            fromLongitude: 0,
-            toLatitude: 0,
-            toLongitude: 0,
+            fromLatitude: transport.fromLocation?.lat || 0,
+            fromLongitude: transport.fromLocation?.lon || 0,
+            toLatitude: transport.toLocation?.lat || 0,
+            toLongitude: transport.toLocation?.lon || 0,
             mode: transport.type,
             duration: transport.duration,
             cost: transport.cost,
@@ -203,7 +203,112 @@ class TripService {
   }
 
   /**
+   * Check if all daily plans have identical content (old trip format)
+   */
+  private hasIdenticalContent(dailyPlans: any[]): boolean {
+    if (!dailyPlans || dailyPlans.length <= 1) {
+      return false;
+    }
+
+    // Get the first day's content as reference
+    const firstDay = dailyPlans[0];
+    const firstActivityNames = (firstDay.activities || []).map((a: any) => a.name).sort().join(',');
+    const firstMealNames = (firstDay.meals || []).map((m: any) => m.name).sort().join(',');
+    const firstTransportTypes = (firstDay.transportations || []).map((t: any) => t.mode || t.type).sort().join(',');
+
+    // Check if all other days have the same content
+    for (let i = 1; i < dailyPlans.length; i++) {
+      const day = dailyPlans[i];
+      const activityNames = (day.activities || []).map((a: any) => a.name).sort().join(',');
+      const mealNames = (day.meals || []).map((m: any) => m.name).sort().join(',');
+      const transportTypes = (day.transportations || []).map((t: any) => t.mode || t.type).sort().join(',');
+
+      if (activityNames !== firstActivityNames || 
+          mealNames !== firstMealNames || 
+          transportTypes !== firstTransportTypes) {
+        return false; // Found different content, not identical
+      }
+    }
+
+    return true; // All days have identical content
+  }
+
+  /**
+   * Regenerate itinerary for an existing trip
+   */
+  private async regenerateItineraryForTrip(trip: any): Promise<void> {
+    console.log(`Regenerating itinerary for trip ${trip.id} (old trip with identical content)`);
+    
+    // Get destination coordinates (with error handling)
+    let locationResults;
+    try {
+      locationResults = await nominatimService.searchPlaces(trip.destination);
+      if (!locationResults || locationResults.length === 0) {
+        throw new Error(`Could not find location for ${trip.destination}`);
+      }
+    } catch (error) {
+      console.error(`Failed to get location for regeneration:`, error);
+      throw new Error(`Failed to regenerate: Could not find destination location`);
+    }
+
+    const location = locationResults[0];
+    const coordinates = location.coordinates;
+
+    // Get weather data (optional, don't fail if it fails)
+    let weatherData;
+    try {
+      weatherData = await weatherService.getForecast(coordinates);
+    } catch (error) {
+      console.warn("Failed to fetch weather data for regeneration (continuing anyway):", error);
+      // Continue without weather data
+    }
+
+    // Prepare AI generation parameters
+    const aiParams: ItineraryGenerationParams = {
+      destination: trip.destination,
+      budget: trip.budget,
+      startDate: new Date(trip.startDate),
+      endDate: new Date(trip.endDate),
+      preferences: trip.preferences || {},
+      weatherData,
+      placesData: locationResults,
+    };
+
+    // Generate new itinerary using AI (will use updated fallback if AI fails)
+    let dailyPlans;
+    try {
+      dailyPlans = await aiService.generateItinerary(aiParams);
+      if (!dailyPlans || dailyPlans.length === 0) {
+        throw new Error("Generated itinerary is empty");
+      }
+    } catch (error) {
+      console.error(`Failed to generate itinerary:`, error);
+      throw new Error(`Failed to regenerate: Could not generate new itinerary`);
+    }
+
+    // Delete old daily plans and their related data (cascade delete will handle related records)
+    try {
+      await prisma.dailyPlan.deleteMany({
+        where: { tripId: trip.id },
+      });
+    } catch (error) {
+      console.error(`Failed to delete old daily plans:`, error);
+      throw new Error(`Failed to regenerate: Could not delete old plans`);
+    }
+
+    // Save new daily plans
+    try {
+      await this.saveDailyPlans(trip.id, dailyPlans);
+      console.log(`Successfully regenerated itinerary for trip ${trip.id} with ${dailyPlans.length} days`);
+    } catch (error) {
+      console.error(`Failed to save new daily plans:`, error);
+      throw new Error(`Failed to regenerate: Could not save new plans`);
+    }
+  }
+
+  /**
    * Get trip by ID with full itinerary
+   * Automatically regenerates old trips with identical content
    */
   async getTripById(tripId: string) {
     const trip = await prisma.trip.findUnique({
@@ -224,6 +329,26 @@ class TripService {
 
     if (!trip) {
       throw new Error("Trip not found");
+    }
+
+    // Check if this is an old trip with identical content across all days
+    if (trip.dailyPlans && trip.dailyPlans.length > 1) {
+      const hasIdentical = this.hasIdenticalContent(trip.dailyPlans);
+      
+      if (hasIdentical) {
+        console.log(`Detected old trip ${tripId} with identical content, scheduling background regeneration...`);
+        
+        // Regenerate in the background (non-blocking)
+        // This ensures the API responds immediately without timeout
+        // The next time the user loads this trip, they'll get the regenerated version
+        this.regenerateItineraryForTrip(trip).catch((error) => {
+          console.error(`Background regeneration failed for trip ${tripId}:`, error);
+          // Don't throw - regeneration failure shouldn't affect the current request
+        });
+        
+        // Return the original trip immediately (non-blocking)
+        // User will see old content this time, but next load will have new content
+      }
     }
 
     return trip;
