@@ -1,213 +1,233 @@
-import React from "react";
+import React from 'react';
 import {
   View,
   Text,
+  ScrollView,
   StyleSheet,
   SafeAreaView,
-  ScrollView,
+  TouchableOpacity,
   StatusBar,
-} from "react-native";
-import { spacing, typography } from "../theme";
-import { useTheme } from "../contexts/ThemeContext";
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { colors, spacing, typography, borderRadius } from '../theme';
 
 interface PrivacyPolicyScreenProps {
   navigation: any;
 }
 
-export default function PrivacyPolicyScreen({
-  navigation,
-}: PrivacyPolicyScreenProps) {
-  const { colors } = useTheme();
-  const styles = createStyles(colors);
-
+export default function PrivacyPolicyScreen({ navigation }: PrivacyPolicyScreenProps) {
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle={colors.mode === 'dark' ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
+      <StatusBar barStyle="dark-content" backgroundColor={colors.white} />
+      
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.backButton}
+        >
+          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Privacy Policy</Text>
+        <View style={styles.placeholder} />
+      </View>
+
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Privacy Policy</Text>
-          <Text style={styles.lastUpdated}>Last updated: January 2024</Text>
-        </View>
-
         <View style={styles.content}>
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>1. Introduction</Text>
-            <Text style={styles.sectionText}>
-              TravelJoy ("we", "our", or "us") is committed to protecting your
-              privacy. This Privacy Policy explains how we collect, use,
-              disclose, and safeguard your information when you use our mobile
-              application.
-            </Text>
-          </View>
+          <Text style={styles.lastUpdated}>Last Updated: December 23, 2025</Text>
 
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>2. Information We Collect</Text>
-            <Text style={styles.sectionText}>
-              We collect information that you provide directly to us, including:
-            </Text>
-            <Text style={styles.bulletPoint}>
-              • Account information (email, name)
-            </Text>
-            <Text style={styles.bulletPoint}>
-              • Travel preferences and trip data
-            </Text>
-            <Text style={styles.bulletPoint}>
-              • Location data (if you enable location services)
-            </Text>
-            <Text style={styles.bulletPoint}>
-              • Usage data and app interactions
-            </Text>
-          </View>
+          <Text style={styles.sectionTitle}>1. Introduction</Text>
+          <Text style={styles.paragraph}>
+            Welcome to TravelJoy's Privacy Policy. We respect your privacy and are committed to protecting your personal data. This privacy policy will inform you about how we look after your personal data when you use our app and tell you about your privacy rights.
+          </Text>
 
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>3. How We Use Your Information</Text>
-            <Text style={styles.sectionText}>
-              We use the information we collect to:
-            </Text>
-            <Text style={styles.bulletPoint}>
-              • Provide, maintain, and improve our services
-            </Text>
-            <Text style={styles.bulletPoint}>
-              • Generate personalized travel itineraries
-            </Text>
-            <Text style={styles.bulletPoint}>
-              • Send you updates and notifications about your trips
-            </Text>
-            <Text style={styles.bulletPoint}>
-              • Respond to your comments and questions
-            </Text>
-          </View>
+          <Text style={styles.sectionTitle}>2. Information We Collect</Text>
+          <Text style={styles.paragraph}>
+            We collect several types of information from and about users of our App, including:
+          </Text>
+          <Text style={styles.bulletPoint}>
+            • Personal identification information (name, email address, phone number)
+          </Text>
+          <Text style={styles.bulletPoint}>
+            • Account credentials and authentication information
+          </Text>
+          <Text style={styles.bulletPoint}>
+            • Travel preferences and search history
+          </Text>
+          <Text style={styles.bulletPoint}>
+            • Device information and usage data
+          </Text>
+          <Text style={styles.bulletPoint}>
+            • Location data (with your permission)
+          </Text>
 
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>4. Data Storage and Security</Text>
-            <Text style={styles.sectionText}>
-              We implement appropriate technical and organizational security
-              measures to protect your personal information. However, no method
-              of transmission over the internet or electronic storage is 100%
-              secure, and we cannot guarantee absolute security.
-            </Text>
-          </View>
+          <Text style={styles.sectionTitle}>3. How We Use Your Information</Text>
+          <Text style={styles.paragraph}>
+            We use the information we collect about you in the following ways:
+          </Text>
+          <Text style={styles.bulletPoint}>
+            • To provide, maintain, and improve our services
+          </Text>
+          <Text style={styles.bulletPoint}>
+            • To personalize your experience and deliver content relevant to your interests
+          </Text>
+          <Text style={styles.bulletPoint}>
+            • To process your transactions and send related information
+          </Text>
+          <Text style={styles.bulletPoint}>
+            • To send you technical notices, updates, and support messages
+          </Text>
+          <Text style={styles.bulletPoint}>
+            • To respond to your comments, questions, and customer service requests
+          </Text>
 
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>5. Third-Party Services</Text>
-            <Text style={styles.sectionText}>
-              Our service may contain links to third-party websites or services.
-              We are not responsible for the privacy practices of these
-              third-party services. We encourage you to read their privacy
-              policies.
-            </Text>
-          </View>
+          <Text style={styles.sectionTitle}>4. Data Sharing and Disclosure</Text>
+          <Text style={styles.paragraph}>
+            We may share your information in the following circumstances:
+          </Text>
+          <Text style={styles.bulletPoint}>
+            • With third-party service providers who perform services on our behalf
+          </Text>
+          <Text style={styles.bulletPoint}>
+            • With travel service providers to facilitate your bookings
+          </Text>
+          <Text style={styles.bulletPoint}>
+            • When required by law or to protect our rights
+          </Text>
+          <Text style={styles.bulletPoint}>
+            • With your consent or at your direction
+          </Text>
 
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>6. Your Rights</Text>
-            <Text style={styles.sectionText}>
-              You have the right to:
-            </Text>
-            <Text style={styles.bulletPoint}>
-              • Access your personal information
-            </Text>
-            <Text style={styles.bulletPoint}>
-              • Correct inaccurate information
-            </Text>
-            <Text style={styles.bulletPoint}>
-              • Request deletion of your data
-            </Text>
-            <Text style={styles.bulletPoint}>
-              • Opt-out of certain data collection
-            </Text>
-          </View>
+          <Text style={styles.sectionTitle}>5. Data Security</Text>
+          <Text style={styles.paragraph}>
+            We implement appropriate technical and organizational measures to protect your personal data against unauthorized or unlawful processing, accidental loss, destruction, or damage. However, no method of transmission over the internet is 100% secure.
+          </Text>
 
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>7. Children's Privacy</Text>
-            <Text style={styles.sectionText}>
-              Our service is not intended for children under the age of 13. We
-              do not knowingly collect personal information from children under
-              13. If you are a parent or guardian and believe your child has
-              provided us with personal information, please contact us.
-            </Text>
-          </View>
+          <Text style={styles.sectionTitle}>6. Data Retention</Text>
+          <Text style={styles.paragraph}>
+            We will retain your personal data only for as long as necessary to fulfill the purposes for which it was collected, including for the purposes of satisfying any legal, accounting, or reporting requirements.
+          </Text>
 
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>8. Changes to This Policy</Text>
-            <Text style={styles.sectionText}>
-              We may update our Privacy Policy from time to time. We will
-              notify you of any changes by posting the new Privacy Policy on
-              this page and updating the "Last updated" date.
-            </Text>
-          </View>
+          <Text style={styles.sectionTitle}>7. Your Privacy Rights</Text>
+          <Text style={styles.paragraph}>
+            Depending on your location, you may have the following rights:
+          </Text>
+          <Text style={styles.bulletPoint}>
+            • The right to access your personal data
+          </Text>
+          <Text style={styles.bulletPoint}>
+            • The right to correct inaccurate data
+          </Text>
+          <Text style={styles.bulletPoint}>
+            • The right to request deletion of your data
+          </Text>
+          <Text style={styles.bulletPoint}>
+            • The right to object to or restrict processing
+          </Text>
+          <Text style={styles.bulletPoint}>
+            • The right to data portability
+          </Text>
 
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>9. Contact Us</Text>
-            <Text style={styles.sectionText}>
-              If you have any questions about this Privacy Policy, please
-              contact us at:
-            </Text>
-            <Text style={styles.contactInfo}>Email: privacy@traveljoy.com</Text>
-            <Text style={styles.contactInfo}>Support: support@traveljoy.com</Text>
-          </View>
+          <Text style={styles.sectionTitle}>8. Cookies and Tracking Technologies</Text>
+          <Text style={styles.paragraph}>
+            We use cookies and similar tracking technologies to track activity on our App and hold certain information. You can instruct your device to refuse all cookies or to indicate when a cookie is being sent.
+          </Text>
+
+          <Text style={styles.sectionTitle}>9. Children's Privacy</Text>
+          <Text style={styles.paragraph}>
+            Our App is not intended for children under the age of 13. We do not knowingly collect personal information from children under 13. If you become aware that a child has provided us with personal data, please contact us.
+          </Text>
+
+          <Text style={styles.sectionTitle}>10. International Data Transfers</Text>
+          <Text style={styles.paragraph}>
+            Your information may be transferred to and maintained on computers located outside of your state, province, country, or other governmental jurisdiction where data protection laws may differ.
+          </Text>
+
+          <Text style={styles.sectionTitle}>11. Changes to This Privacy Policy</Text>
+          <Text style={styles.paragraph}>
+            We may update our Privacy Policy from time to time. We will notify you of any changes by posting the new Privacy Policy on this page and updating the "Last Updated" date.
+          </Text>
+
+          <Text style={styles.sectionTitle}>12. Contact Us</Text>
+          <Text style={styles.paragraph}>
+            If you have any questions about this Privacy Policy, please contact us:
+          </Text>
+          <Text style={styles.contactInfo}>
+            Email: privacy@traveljoy.com{'\n'}
+            Address: 123 Travel Street, Adventure City, AC 12345{'\n'}
+            Phone: +1 (555) 123-4567
+          </Text>
+
+          <View style={styles.bottomSpacing} />
         </View>
-
-        <View style={styles.bottomSpacing} />
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-const createStyles = (colors: any) => StyleSheet.create({
+const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.white,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.gray200,
+  },
+  backButton: {
+    padding: spacing.xs,
+  },
+  headerTitle: {
+    ...typography.h3,
+    color: colors.textPrimary,
+  },
+  placeholder: {
+    width: 40,
   },
   container: {
     flex: 1,
   },
-  header: {
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.md,
-  },
-  title: {
-    ...typography.h1,
-    color: colors.textPrimary,
-    marginBottom: spacing.xs,
+  content: {
+    padding: spacing.lg,
   },
   lastUpdated: {
     ...typography.body2,
     color: colors.textSecondary,
-  },
-  content: {
-    paddingHorizontal: spacing.md,
-  },
-  section: {
+    fontStyle: 'italic',
     marginBottom: spacing.xl,
   },
   sectionTitle: {
-    ...typography.h3,
+    ...typography.h4,
     color: colors.textPrimary,
+    marginTop: spacing.lg,
     marginBottom: spacing.sm,
-    fontWeight: "600",
   },
-  sectionText: {
+  paragraph: {
     ...typography.body1,
     color: colors.textSecondary,
     lineHeight: 24,
-    marginBottom: spacing.sm,
+    marginBottom: spacing.md,
   },
   bulletPoint: {
     ...typography.body1,
     color: colors.textSecondary,
     lineHeight: 24,
-    marginLeft: spacing.md,
     marginBottom: spacing.xs,
+    paddingLeft: spacing.md,
   },
   contactInfo: {
     ...typography.body1,
     color: colors.primary,
-    fontWeight: "600",
-    marginTop: spacing.xs,
+    lineHeight: 24,
+    marginBottom: spacing.md,
+    fontWeight: '500',
   },
   bottomSpacing: {
     height: spacing.xl,
   },
 });
-

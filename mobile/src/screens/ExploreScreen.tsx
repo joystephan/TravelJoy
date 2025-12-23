@@ -416,8 +416,8 @@ export default function ExploreScreen({ navigation }: ExploreScreenProps) {
         {selectedCategory === 'hotels' ? (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Hotels</Text>
-              <TouchableOpacity>
+              <Text style={styles.sectionTitle}>Popular Hotels</Text>
+              <TouchableOpacity onPress={() => loadHotels()}>
                 <Text style={styles.seeAll}>See all</Text>
               </TouchableOpacity>
             </View>
@@ -454,8 +454,8 @@ export default function ExploreScreen({ navigation }: ExploreScreenProps) {
         ) : selectedCategory === 'flights' ? (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Flights</Text>
-              <TouchableOpacity>
+              <Text style={styles.sectionTitle}>Trending Flights</Text>
+              <TouchableOpacity onPress={() => loadFlights()}>
                 <Text style={styles.seeAll}>See all</Text>
               </TouchableOpacity>
             </View>
@@ -495,7 +495,7 @@ export default function ExploreScreen({ navigation }: ExploreScreenProps) {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Popular Destinations</Text>
-              <TouchableOpacity>
+              <TouchableOpacity onPress={() => setSearchQuery('')}>
                 <Text style={styles.seeAll}>See all</Text>
               </TouchableOpacity>
             </View>

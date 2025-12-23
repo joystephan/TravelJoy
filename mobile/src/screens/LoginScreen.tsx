@@ -150,25 +150,6 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
                 <Text style={styles.loginButtonText}>Sign In</Text>
               )}
             </TouchableOpacity>
-
-            {/* Divider */}
-            <View style={styles.divider}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>or</Text>
-              <View style={styles.dividerLine} />
-            </View>
-
-            {/* Social Login Buttons */}
-            <View style={styles.socialButtons}>
-              <TouchableOpacity style={styles.socialButton}>
-                <Text style={styles.socialIcon}>📱</Text>
-                <Text style={styles.socialText}>Google</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.socialButton}>
-                <Text style={styles.socialIcon}>📘</Text>
-                <Text style={styles.socialText}>Facebook</Text>
-              </TouchableOpacity>
-            </View>
           </View>
 
           {/* Sign Up Link */}
@@ -286,45 +267,6 @@ const styles = StyleSheet.create({
   loginButtonText: {
     ...typography.button,
     color: colors.white,
-  },
-  divider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: spacing.lg,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: colors.gray200,
-  },
-  dividerText: {
-    ...typography.body2,
-    color: colors.textLight,
-    marginHorizontal: spacing.md,
-  },
-  socialButtons: {
-    flexDirection: 'row',
-    gap: spacing.md,
-  },
-  socialButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.white,
-    borderRadius: borderRadius.lg,
-    padding: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.gray200,
-  },
-  socialIcon: {
-    fontSize: 20,
-    marginRight: spacing.sm,
-  },
-  socialText: {
-    ...typography.body2,
-    color: colors.textPrimary,
-    fontWeight: '600',
   },
   signupSection: {
     flexDirection: 'row',
