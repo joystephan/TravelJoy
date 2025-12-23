@@ -178,8 +178,11 @@ export default function TripDetailScreen({
       selectedDay,
       planId: currentDayPlan.id,
       mealsCount: newMeals.length,
-      mealNames: newMeals.map((m: any) => m.name || m.restaurantName || 'unnamed'),
-      mealIds: newMeals.map((m: any) => m.id),
+      meals: newMeals.map((m: any) => ({
+        id: m.id,
+        name: m.name || m.restaurantName || 'unnamed',
+        cost: m.cost
+      })),
     });
     return newMeals;
   }, [currentDayPlan, selectedDay]);
@@ -200,6 +203,54 @@ export default function TripDetailScreen({
     });
     return newTransportations;
   }, [currentDayPlan, selectedDay]);
+
+  // Calculate actual daily budget from current items
+  const calculatedDailyBudget = useMemo(() => {
+    const activitiesCost = currentDayActivities.reduce((sum, activity) => sum + (activity.cost || 0), 0);
+    const mealsCost = currentDayMeals.reduce((sum, meal) => sum + (meal.cost || 0), 0);
+    const transportCost = currentDayTransportations.reduce((sum, transport) => sum + (transport.cost || 0), 0);
+    const total = activitiesCost + mealsCost + transportCost;
+    
+    console.log('Daily budget calculation:', {
+      selectedDay,
+      activitiesCost,
+      mealsCost,
+      transportCost,
+      total,
+      activitiesBreakdown: currentDayActivities.map(a => ({ name: a.name, cost: a.cost })),
+      mealsBreakdown: currentDayMeals.map(m => ({ name: m.name, cost: m.cost })),
+      transportBreakdown: currentDayTransportations.map(t => ({ mode: t.mode, cost: t.cost })),
+    });
+    
+    return total;
+  }, [currentDayActivities, currentDayMeals, currentDayTransportations, selectedDay]);
+
+  // Calculate map region for current day based on first activity
+  const currentDayMapRegion = useMemo(() => {
+    // Use first activity location if available, otherwise use destination coordinates
+    if (currentDayActivities.length > 0 && 
+        currentDayActivities[0].latitude !== 0 && 
+        currentDayActivities[0].longitude !== 0) {
+      return {
+        latitude: currentDayActivities[0].latitude,
+        longitude: currentDayActivities[0].longitude,
+        latitudeDelta: 0.1,
+        longitudeDelta: 0.1,
+      };
+    }
+    
+    // Fallback to destination coordinates
+    if (destinationCoordinates) {
+      return {
+        latitude: destinationCoordinates.latitude,
+        longitude: destinationCoordinates.longitude,
+        latitudeDelta: 0.1,
+        longitudeDelta: 0.1,
+      };
+    }
+    
+    return undefined;
+  }, [currentDayActivities, destinationCoordinates, selectedDay]);
   
   // Debug logging when selectedDay changes
   useEffect(() => {
@@ -249,13 +300,18 @@ export default function TripDetailScreen({
             id: plan.id,
             date: plan.date,
             activities: plan.activities?.map((a: any) => a.name || a.title) || [],
-            meals: plan.meals?.map((m: any) => m.name || m.restaurantName) || [],
+            meals: plan.meals?.map((m: any) => ({
+              name: m.name || m.restaurantName,
+              cost: m.cost,
+              id: m.id
+            })) || [],
             transportations: plan.transportations?.map((t: any) => t.type || t.mode) || [],
           });
         });
       }
       
-      setTrip(tripData);
+      // Force a complete state update with a new object reference
+      setTrip({ ...tripData, _refreshKey: Date.now() });
       
       // Fetch destination coordinates for the map
       if (tripData.destination) {
@@ -337,8 +393,7 @@ export default function TripDetailScreen({
           style: "destructive",
           onPress: async () => {
             try {
-              // TODO: Add deleteMeal method to tripService
-              // await tripService.deleteMeal(mealId);
+              await tripService.deleteMeal(mealId);
               await loadTrip();
               Alert.alert("Success", "Meal deleted successfully");
             } catch (error: any) {
@@ -474,17 +529,13 @@ export default function TripDetailScreen({
           {/* Real Map */}
           <View style={styles.map}>
             <MapComponent
+              key={`map-${selectedDay}-${currentDayPlan?.id}-${dayChangeKey}`}
               locations={currentDayActivities.map((activity) => ({
                 latitude: activity.latitude,
                 longitude: activity.longitude,
                 name: activity.name,
               }))}
-              initialRegion={destinationCoordinates ? {
-                latitude: destinationCoordinates.latitude,
-                longitude: destinationCoordinates.longitude,
-                latitudeDelta: 0.1,
-                longitudeDelta: 0.1,
-              } : undefined}
+              initialRegion={currentDayMapRegion}
               style={styles.mapComponent}
             />
           </View>
@@ -494,13 +545,6 @@ export default function TripDetailScreen({
 
           {/* Trip Header */}
           <View style={styles.heroContent}>
-            <TouchableOpacity
-              style={styles.backButton}
-              onPress={() => navigation.goBack()}
-            >
-              <Text style={styles.backIcon}>←</Text>
-            </TouchableOpacity>
-
             <View style={styles.heroInfo}>
               <Text style={styles.destination}>{trip.destination}</Text>
               <View style={styles.tripMeta}>
@@ -582,21 +626,8 @@ export default function TripDetailScreen({
             <View style={styles.budgetContent}>
               <Text style={styles.budgetLabel}>Daily Budget</Text>
               <Text style={styles.budgetAmount}>
-                ${currentDayPlan.estimatedCost.toFixed(2)}
+                ${calculatedDailyBudget.toFixed(2)}
               </Text>
-            </View>
-            <View style={styles.budgetProgress}>
-              <View
-                style={[
-                  styles.budgetProgressFill,
-                  {
-                    width: `${Math.min(
-                      (currentDayPlan.estimatedCost / (trip.budget / trip.dailyPlans.length)) * 100,
-                      100
-                    )}%`,
-                  },
-                ]}
-              />
             </View>
           </View>
 
@@ -841,20 +872,7 @@ const createStyles = (colors: any) => StyleSheet.create({
   heroContent: {
     ...StyleSheet.absoluteFillObject,
     padding: spacing.md,
-    justifyContent: 'space-between',
-  },
-  backButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: colors.surface,
-    justifyContent: 'center',
-    alignItems: 'center',
-    ...shadows.md,
-  },
-  backIcon: {
-    fontSize: 24,
-    color: colors.textPrimary,
+    justifyContent: 'flex-end',
   },
   heroInfo: {
     marginBottom: spacing.md,
@@ -961,16 +979,6 @@ const createStyles = (colors: any) => StyleSheet.create({
     ...typography.h2,
     color: colors.primary,
     fontWeight: '700',
-  },
-  budgetProgress: {
-    height: 6,
-    backgroundColor: colors.gray200,
-    borderRadius: 3,
-    overflow: 'hidden',
-  },
-  budgetProgressFill: {
-    height: '100%',
-    backgroundColor: colors.primary,
   },
   section: {
     paddingHorizontal: spacing.md,

@@ -12,7 +12,6 @@ import {
   SafeAreaView,
 } from "react-native";
 import { tripService } from "../services/tripService";
-import { Meal } from "../types";
 import { typography, spacing, borderRadius, shadows } from "../theme";
 import { useTheme } from "../contexts/ThemeContext";
 
@@ -29,13 +28,13 @@ export default function EditMealScreen({
   const { meal, onSave } = route.params;
 
   const [name, setName] = useState(meal.name);
-  const [mealType, setMealType] = useState(meal.mealType);
+  const [description, setDescription] = useState(meal.description || "");
   const [cost, setCost] = useState(meal.cost.toString());
+  const [mealType, setMealType] = useState(meal.mealType);
   const [cuisine, setCuisine] = useState(meal.cuisine || "");
   const [loading, setLoading] = useState(false);
 
-  const mealTypes = ["breakfast", "lunch", "dinner", "snack", "drinks"];
-  const cuisines = ["local", "international", "asian", "european", "american", "mediterranean"];
+  const mealTypes = ["breakfast", "lunch", "dinner", "snack"];
 
   const validateForm = () => {
     if (!name.trim()) {
@@ -54,169 +53,245 @@ export default function EditMealScreen({
 
     setLoading(true);
     try {
-      // TODO: Add updateMeal method to tripService
-      // await tripService.updateMeal(meal.id, {
-      //   name,
-      //   mealType,
-      //   cost: parseFloat(cost),
-      //   cuisine: cuisine || undefined,
-      // });
+      console.log('Updating meal:', meal.id, 'with cost:', parseFloat(cost));
+      
+      const updatedMeal = await tripService.updateMeal(meal.id, {
+        name,
+        description,
+        cost: parseFloat(cost),
+        mealType,
+        cuisine,
+      });
 
-      Alert.alert("Success", "Meal updated successfully", [
-        {
-          text: "OK",
-          onPress: () => {
-            if (onSave) onSave();
-            navigation.goBack();
-          },
-        },
-      ]);
+      console.log('Meal update response:', updatedMeal);
+
+      // Small delay to ensure database transaction completes
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Trigger the refresh callback before navigating back
+      if (onSave) {
+        console.log('Calling onSave callback to refresh trip data');
+        await onSave();
+      }
+
+      // Navigate back
+      navigation.goBack();
+      
+      Alert.alert("Success", "Meal updated successfully");
     } catch (error: any) {
+      console.error('Failed to update meal:', error);
       Alert.alert("Error", error.message || "Failed to update meal");
     } finally {
       setLoading(false);
     }
   };
 
-  const styles = createStyles(colors);
-
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle={colors.mode === 'dark' ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
-      <ScrollView style={styles.container}>
-        <View style={styles.content}>
-          <Text style={styles.title}>Edit Meal</Text>
-
-        <View style={styles.section}>
-          <Text style={styles.label}>Meal Name</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="e.g., Café du Matin"
-            placeholderTextColor={colors.textLight}
-            value={name}
-            onChangeText={setName}
-          />
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.label}>Meal Type</Text>
-          <View style={styles.categoryGrid}>
-            {mealTypes.map((type) => (
-              <TouchableOpacity
-                key={type}
-                style={[
-                  styles.categoryButton,
-                  mealType === type && styles.categoryButtonSelected,
-                ]}
-                onPress={() => setMealType(type)}
-              >
-                <Text
-                  style={[
-                    styles.categoryText,
-                    mealType === type && styles.categoryTextSelected,
-                  ]}
-                >
-                  {type}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.label}>Cost ($)</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="25.00"
-            placeholderTextColor={colors.textLight}
-            value={cost}
-            onChangeText={setCost}
-            keyboardType="decimal-pad"
-          />
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.label}>Cuisine (Optional)</Text>
-          <View style={styles.categoryGrid}>
-            {cuisines.map((cuis) => (
-              <TouchableOpacity
-                key={cuis}
-                style={[
-                  styles.categoryButton,
-                  cuisine === cuis && styles.categoryButtonSelected,
-                ]}
-                onPress={() => setCuisine(cuisine === cuis ? "" : cuis)}
-              >
-                <Text
-                  style={[
-                    styles.categoryText,
-                    cuisine === cuis && styles.categoryTextSelected,
-                  ]}
-                >
-                  {cuis}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
+    <SafeAreaView
+      style={[styles.safeArea, { backgroundColor: colors.background }]}
+    >
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={colors.primary}
+        translucent={false}
+      />
+      <View style={[styles.header, { backgroundColor: colors.primary }]}>
         <TouchableOpacity
-          style={[styles.saveButton, loading && styles.saveButtonDisabled]}
-          onPress={handleSave}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color={colors.white} />
-          ) : (
-            <Text style={styles.saveButtonText}>Save Changes</Text>
-          )}
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.cancelButton}
           onPress={() => navigation.goBack()}
+          style={styles.backButton}
         >
-          <Text style={styles.cancelButtonText}>Cancel</Text>
+          <Text style={styles.backButtonText}>←</Text>
         </TouchableOpacity>
+        <Text style={styles.headerTitle}>Edit Meal</Text>
+        <View style={styles.placeholder} />
+      </View>
+
+      <ScrollView style={styles.container}>
+        <View style={styles.form}>
+          <View style={styles.inputGroup}>
+            <Text style={[styles.label, { color: colors.text }]}>
+              Meal Name *
+            </Text>
+            <TextInput
+              style={[
+                styles.input,
+                {
+                  backgroundColor: colors.surface,
+                  color: colors.text,
+                  borderColor: colors.border,
+                },
+              ]}
+              value={name}
+              onChangeText={setName}
+              placeholder="Enter meal name"
+              placeholderTextColor={colors.textSecondary}
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={[styles.label, { color: colors.text }]}>
+              Description
+            </Text>
+            <TextInput
+              style={[
+                styles.input,
+                styles.textArea,
+                {
+                  backgroundColor: colors.surface,
+                  color: colors.text,
+                  borderColor: colors.border,
+                },
+              ]}
+              value={description}
+              onChangeText={setDescription}
+              placeholder="Enter meal description"
+              placeholderTextColor={colors.textSecondary}
+              multiline
+              numberOfLines={4}
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={[styles.label, { color: colors.text }]}>
+              Cost ($) *
+            </Text>
+            <TextInput
+              style={[
+                styles.input,
+                {
+                  backgroundColor: colors.surface,
+                  color: colors.text,
+                  borderColor: colors.border,
+                },
+              ]}
+              value={cost}
+              onChangeText={setCost}
+              placeholder="Enter cost"
+              placeholderTextColor={colors.textSecondary}
+              keyboardType="decimal-pad"
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={[styles.label, { color: colors.text }]}>
+              Meal Type *
+            </Text>
+            <View style={styles.categoryGrid}>
+              {mealTypes.map((type) => (
+                <TouchableOpacity
+                  key={type}
+                  style={[
+                    styles.categoryButton,
+                    {
+                      backgroundColor:
+                        mealType === type ? colors.primary : colors.surface,
+                      borderColor: colors.border,
+                    },
+                  ]}
+                  onPress={() => setMealType(type)}
+                >
+                  <Text
+                    style={[
+                      styles.categoryButtonText,
+                      {
+                        color: mealType === type ? "#FFFFFF" : colors.text,
+                      },
+                    ]}
+                  >
+                    {type.charAt(0).toUpperCase() + type.slice(1)}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={[styles.label, { color: colors.text }]}>Cuisine</Text>
+            <TextInput
+              style={[
+                styles.input,
+                {
+                  backgroundColor: colors.surface,
+                  color: colors.text,
+                  borderColor: colors.border,
+                },
+              ]}
+              value={cuisine}
+              onChangeText={setCuisine}
+              placeholder="e.g., Italian, Japanese, Mexican"
+              placeholderTextColor={colors.textSecondary}
+            />
+          </View>
+
+          <TouchableOpacity
+            style={[
+              styles.saveButton,
+              { backgroundColor: colors.primary },
+              loading && styles.saveButtonDisabled,
+            ]}
+            onPress={handleSave}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <Text style={styles.saveButtonText}>Save Changes</Text>
+            )}
+          </TouchableOpacity>
         </View>
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-const createStyles = (colors: any) => StyleSheet.create({
+const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.background,
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    ...shadows.small,
+  },
+  backButton: {
+    padding: spacing.xs,
+  },
+  backButtonText: {
+    fontSize: 28,
+    color: "#FFFFFF",
+  },
+  headerTitle: {
+    ...typography.h1,
+    color: "#FFFFFF",
+  },
+  placeholder: {
+    width: 40,
   },
   container: {
     flex: 1,
-    backgroundColor: colors.background,
   },
-  content: {
+  form: {
     padding: spacing.lg,
   },
-  title: {
-    ...typography.h1,
-    color: colors.textPrimary,
-    marginBottom: spacing.xl,
-  },
-  section: {
-    marginBottom: spacing.xl,
+  inputGroup: {
+    marginBottom: spacing.lg,
   },
   label: {
     ...typography.label,
-    color: colors.textPrimary,
-    marginBottom: spacing.sm,
+    marginBottom: spacing.xs,
   },
   input: {
-    backgroundColor: colors.surface,
+    borderWidth: 1,
     borderRadius: borderRadius.md,
     padding: spacing.md,
     ...typography.body1,
-    color: colors.textPrimary,
-    borderWidth: 1,
-    borderColor: colors.gray200,
+  },
+  textArea: {
+    height: 100,
+    textAlignVertical: "top",
   },
   categoryGrid: {
     flexDirection: "row",
@@ -224,66 +299,28 @@ const createStyles = (colors: any) => StyleSheet.create({
     gap: spacing.sm,
   },
   categoryButton: {
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.xl,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.full,
     borderWidth: 1,
-    borderColor: colors.gray200,
-    minHeight: 44,
+    minWidth: 100,
+    alignItems: "center",
   },
-  categoryButtonSelected: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  categoryText: {
+  categoryButtonText: {
     ...typography.body2,
-    color: colors.textSecondary,
-    textTransform: "capitalize",
-  },
-  categoryTextSelected: {
-    ...typography.body2,
-    color: colors.white,
-    fontWeight: "600",
   },
   saveButton: {
-    backgroundColor: colors.primary,
-    borderRadius: borderRadius.lg,
-    paddingVertical: spacing.lg,
-    paddingHorizontal: spacing.xl,
+    padding: spacing.md,
+    borderRadius: borderRadius.md,
     alignItems: "center",
-    justifyContent: "center",
-    marginTop: spacing.md,
-    minHeight: 52,
-    ...shadows.md,
+    marginTop: spacing.lg,
+    ...shadows.small,
   },
   saveButtonDisabled: {
-    backgroundColor: colors.gray400,
+    opacity: 0.6,
   },
   saveButtonText: {
+    color: "#FFFFFF",
     ...typography.button,
-    color: colors.white,
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  cancelButton: {
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.lg,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.xl,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: spacing.sm,
-    marginBottom: spacing.xl,
-    borderWidth: 1,
-    borderColor: colors.gray200,
-    minHeight: 44,
-  },
-  cancelButtonText: {
-    ...typography.button,
-    color: colors.textSecondary,
-    fontSize: 16,
-    fontWeight: "600",
   },
 });
-

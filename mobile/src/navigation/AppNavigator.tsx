@@ -17,7 +17,8 @@ import { useTheme } from "../contexts/ThemeContext";
 const TripCreationScreen = lazy(() => import("../screens/TripCreationScreen"));
 const TripDetailScreen = lazy(() => import("../screens/TripDetailScreen"));
 const EditActivityScreen = lazy(() => import("../screens/EditActivityScreen"));
-const EditMealScreen = lazy(() => import("../screens/EditMealScreen"));
+// Import EditMealScreen directly to avoid lazy loading issues
+import EditMealScreen from "../screens/EditMealScreen";
 const ProfileScreen = lazy(() => import("../screens/ProfileScreen"));
 const TravelPreferencesScreen = lazy(
   () => import("../screens/TravelPreferencesScreen")
@@ -182,7 +183,7 @@ export default function AppNavigator() {
       />
       <Stack.Screen
         name="EditMeal"
-        component={withSuspense(EditMealScreen)}
+        component={EditMealScreen}
         options={{ title: "Edit Meal" }}
       />
       <Stack.Screen

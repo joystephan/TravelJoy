@@ -16,4 +16,7 @@ router.post("/:tripId/optimize", tripController_1.tripController.optimizeTrip.bi
 router.put("/activities/:activityId", tripController_1.tripController.updateActivity.bind(tripController_1.tripController));
 router.delete("/activities/:activityId", tripController_1.tripController.deleteActivity.bind(tripController_1.tripController));
 router.post("/activities/:activityId/replace", tripController_1.tripController.replaceActivity.bind(tripController_1.tripController));
+// Meal management routes
+router.put("/meals/:mealId", tripController_1.tripController.updateMeal.bind(tripController_1.tripController));
+router.delete("/meals/:mealId", tripController_1.tripController.deleteMeal.bind(tripController_1.tripController));
 exports.default = router;

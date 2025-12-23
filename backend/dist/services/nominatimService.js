@@ -7,8 +7,8 @@ const axios_1 = __importDefault(require("axios"));
 const redis_1 = __importDefault(require("../config/redis"));
 class NominatimService {
     constructor() {
-        this.baseUrl = "https://nominatim.openstreetmap.org";
-        this.userAgent = "TravelJoy/1.0";
+        this.baseUrl = "https://us1.locationiq.com/v1";
+        this.apiKey = process.env.LOCATIONIQ_API_KEY || "pk.44c3f34a6e224bb5d8f41044718dc07d";
         this.cacheExpiry = 86400; // 24 hours in seconds
     }
     /**
@@ -22,20 +22,17 @@ class NominatimService {
             return cached;
         }
         try {
-            // Rate limiting: wait 1 second between requests
-            await this.rateLimit();
             const params = {
                 q: query,
+                key: this.apiKey,
                 format: "json",
                 addressdetails: options.addressDetails ? 1 : 0,
                 limit: options.limit || 10,
                 ...(options.countryCode && { countrycodes: options.countryCode }),
             };
-            const response = await axios_1.default.get(`${this.baseUrl}/search`, {
+            const response = await axios_1.default.get(`${this.baseUrl}/search.php`, {
                 params,
-                headers: {
-                    "User-Agent": this.userAgent,
-                },
+                timeout: 10000,
             });
             const places = this.mapToPlaces(response.data);
             // Cache the results
@@ -43,7 +40,10 @@ class NominatimService {
             return places;
         }
         catch (error) {
-            console.error("Nominatim search error:", error);
+            console.error("LocationIQ search error:", error);
+            if (axios_1.default.isAxiosError(error) && error.code === 'ECONNABORTED') {
+                throw new Error("LocationIQ API request timed out.");
+            }
             throw new Error("Failed to search places");
         }
     }
@@ -58,16 +58,14 @@ class NominatimService {
             return cached;
         }
         try {
-            await this.rateLimit();
-            const response = await axios_1.default.get(`${this.baseUrl}/search`, {
+            const response = await axios_1.default.get(`${this.baseUrl}/search.php`, {
                 params: {
                     q: address,
+                    key: this.apiKey,
                     format: "json",
                     limit: 1,
                 },
-                headers: {
-                    "User-Agent": this.userAgent,
-                },
+                timeout: 10000,
             });
             if (response.data.length === 0) {
                 return null;
@@ -81,7 +79,10 @@ class NominatimService {
             return coordinates;
         }
         catch (error) {
-            console.error("Nominatim geocode error:", error);
+            console.error("LocationIQ geocode error:", error);
+            if (axios_1.default.isAxiosError(error) && error.code === 'ECONNABORTED') {
+                throw new Error("LocationIQ API request timed out.");
+            }
             throw new Error("Failed to geocode address");
         }
     }
@@ -96,17 +97,15 @@ class NominatimService {
             return cached;
         }
         try {
-            await this.rateLimit();
-            const response = await axios_1.default.get(`${this.baseUrl}/reverse`, {
+            const response = await axios_1.default.get(`${this.baseUrl}/reverse.php`, {
                 params: {
                     lat,
                     lon,
+                    key: this.apiKey,
                     format: "json",
                     addressdetails: 1,
                 },
-                headers: {
-                    "User-Agent": this.userAgent,
-                },
+                timeout: 10000,
             });
             if (!response.data || response.data.error) {
                 return null;
@@ -117,7 +116,10 @@ class NominatimService {
             return place;
         }
         catch (error) {
-            console.error("Nominatim reverse geocode error:", error);
+            console.error("LocationIQ reverse geocode error:", error);
+            if (axios_1.default.isAxiosError(error) && error.code === 'ECONNABORTED') {
+                throw new Error("LocationIQ API request timed out.");
+            }
             throw new Error("Failed to reverse geocode coordinates");
         }
     }
@@ -132,16 +134,14 @@ class NominatimService {
             return cached;
         }
         try {
-            await this.rateLimit();
-            const response = await axios_1.default.get(`${this.baseUrl}/lookup`, {
+            const response = await axios_1.default.get(`${this.baseUrl}/lookup.php`, {
                 params: {
                     osm_ids: `${osmType[0].toUpperCase()}${osmId}`,
+                    key: this.apiKey,
                     format: "json",
                     addressdetails: 1,
                 },
-                headers: {
-                    "User-Agent": this.userAgent,
-                },
+                timeout: 10000,
             });
             if (response.data.length === 0) {
                 return null;
@@ -152,7 +152,10 @@ class NominatimService {
             return place;
         }
         catch (error) {
-            console.error("Nominatim place details error:", error);
+            console.error("LocationIQ place details error:", error);
+            if (axios_1.default.isAxiosError(error) && error.code === 'ECONNABORTED') {
+                throw new Error("LocationIQ API request timed out.");
+            }
             throw new Error("Failed to get place details");
         }
     }
@@ -186,18 +189,121 @@ class NominatimService {
         };
     }
     /**
-     * Rate limiting: Nominatim allows 1 request per second
+     * Search for specific types of places (attractions, restaurants, etc.)
      */
-    async rateLimit() {
-        const lastRequestKey = "nominatim:lastRequest";
-        const lastRequest = await redis_1.default.get(lastRequestKey);
-        if (lastRequest) {
-            const timeSinceLastRequest = Date.now() - parseInt(lastRequest);
-            if (timeSinceLastRequest < 1000) {
-                await new Promise((resolve) => setTimeout(resolve, 1000 - timeSinceLastRequest));
+    async searchPlacesByType(destination, type, subtype, limit = 20) {
+        const cacheKey = `nominatim:type:${destination}:${type}:${subtype}:${limit}`;
+        // Check cache first
+        const cached = await this.getFromCache(cacheKey);
+        if (cached) {
+            return cached;
+        }
+        try {
+            // Build query based on type
+            let query = "";
+            if (type === "tourism") {
+                // Search for tourist attractions
+                query = subtype
+                    ? `${subtype} in ${destination}`
+                    : `tourist attractions in ${destination}`;
+            }
+            else if (type === "amenity") {
+                // Search for amenities like restaurants, cafes
+                query = subtype
+                    ? `${subtype} in ${destination}`
+                    : `restaurants in ${destination}`;
+            }
+            const response = await axios_1.default.get(`${this.baseUrl}/search.php`, {
+                params: {
+                    q: query,
+                    key: this.apiKey,
+                    format: "json",
+                    addressdetails: 1,
+                    limit: limit,
+                },
+                timeout: 10000,
+            });
+            const places = this.mapToPlaces(response.data);
+            // Cache the results
+            await this.saveToCache(cacheKey, places);
+            return places;
+        }
+        catch (error) {
+            console.error(`LocationIQ search by type error (${type}):`, error);
+            return []; // Return empty array instead of throwing
+        }
+    }
+    /**
+     * Search for tourist attractions in a destination
+     */
+    async searchAttractions(destination, limit = 20) {
+        const queries = [
+            `museums in ${destination}`,
+            `tourist attractions in ${destination}`,
+            `landmarks in ${destination}`,
+            `monuments in ${destination}`,
+            `art galleries in ${destination}`,
+            `parks in ${destination}`,
+        ];
+        const allPlaces = [];
+        const seenNames = new Set();
+        // Try multiple queries to get diverse results
+        for (const query of queries) {
+            try {
+                const places = await this.searchPlaces(query, { limit: 5 });
+                for (const place of places) {
+                    // Avoid duplicates based on name
+                    const normalizedName = place.name.toLowerCase().trim();
+                    if (!seenNames.has(normalizedName)) {
+                        seenNames.add(normalizedName);
+                        allPlaces.push(place);
+                    }
+                }
+                if (allPlaces.length >= limit) {
+                    break;
+                }
+            }
+            catch (error) {
+                console.warn(`Failed to search with query "${query}":`, error);
+                continue;
             }
         }
-        await redis_1.default.set(lastRequestKey, Date.now().toString(), "EX", 2);
+        return allPlaces.slice(0, limit);
+    }
+    /**
+     * Search for restaurants in a destination
+     */
+    async searchRestaurants(destination, limit = 20) {
+        const queries = [
+            `restaurants in ${destination}`,
+            `cafes in ${destination}`,
+            `bistros in ${destination}`,
+            `dining in ${destination}`,
+        ];
+        const allPlaces = [];
+        const seenNames = new Set();
+        // Try multiple queries to get diverse results
+        for (const query of queries) {
+            try {
+                const places = await this.searchPlaces(query, { limit: 5 });
+                for (const place of places) {
+                    // Avoid duplicates based on name
+                    const normalizedName = place.name.toLowerCase().trim();
+                    if (!seenNames.has(normalizedName)) {
+                        seenNames.add(normalizedName);
+                        allPlaces.push(place);
+                    }
+                }
+                if (allPlaces.length >= limit) {
+                    break;
+                }
+            }
+            catch (error) {
+                console.warn(`Failed to search with query "${query}":`, error);
+                continue;
+            }
+        }
+        return allPlaces.slice(0, limit);
     }
     /**
      * Cache helper methods

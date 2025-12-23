@@ -241,6 +241,141 @@ class NominatimService {
 
 
   /**
+   * Search for specific types of places (attractions, restaurants, etc.)
+   */
+  async searchPlacesByType(
+    destination: string,
+    type: "tourism" | "amenity",
+    subtype?: string,
+    limit: number = 20
+  ): Promise<Place[]> {
+    const cacheKey = `nominatim:type:${destination}:${type}:${subtype}:${limit}`;
+
+    // Check cache first
+    const cached = await this.getFromCache(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    try {
+      // Build query based on type
+      let query = "";
+      if (type === "tourism") {
+        // Search for tourist attractions
+        query = subtype 
+          ? `${subtype} in ${destination}` 
+          : `tourist attractions in ${destination}`;
+      } else if (type === "amenity") {
+        // Search for amenities like restaurants, cafes
+        query = subtype 
+          ? `${subtype} in ${destination}` 
+          : `restaurants in ${destination}`;
+      }
+
+      const response = await axios.get(`${this.baseUrl}/search.php`, {
+        params: {
+          q: query,
+          key: this.apiKey,
+          format: "json",
+          addressdetails: 1,
+          limit: limit,
+        },
+        timeout: 10000,
+      });
+
+      const places = this.mapToPlaces(response.data);
+
+      // Cache the results
+      await this.saveToCache(cacheKey, places);
+
+      return places;
+    } catch (error) {
+      console.error(`LocationIQ search by type error (${type}):`, error);
+      return []; // Return empty array instead of throwing
+    }
+  }
+
+  /**
+   * Search for tourist attractions in a destination
+   */
+  async searchAttractions(destination: string, limit: number = 20): Promise<Place[]> {
+    const queries = [
+      `museums in ${destination}`,
+      `tourist attractions in ${destination}`,
+      `landmarks in ${destination}`,
+      `monuments in ${destination}`,
+      `art galleries in ${destination}`,
+      `parks in ${destination}`,
+    ];
+
+    const allPlaces: Place[] = [];
+    const seenNames = new Set<string>();
+
+    // Try multiple queries to get diverse results
+    for (const query of queries) {
+      try {
+        const places = await this.searchPlaces(query, { limit: 5 });
+        for (const place of places) {
+          // Avoid duplicates based on name
+          const normalizedName = place.name.toLowerCase().trim();
+          if (!seenNames.has(normalizedName)) {
+            seenNames.add(normalizedName);
+            allPlaces.push(place);
+          }
+        }
+        
+        if (allPlaces.length >= limit) {
+          break;
+        }
+      } catch (error) {
+        console.warn(`Failed to search with query "${query}":`, error);
+        continue;
+      }
+    }
+
+    return allPlaces.slice(0, limit);
+  }
+
+  /**
+   * Search for restaurants in a destination
+   */
+  async searchRestaurants(destination: string, limit: number = 20): Promise<Place[]> {
+    const queries = [
+      `restaurants in ${destination}`,
+      `cafes in ${destination}`,
+      `bistros in ${destination}`,
+      `dining in ${destination}`,
+    ];
+
+    const allPlaces: Place[] = [];
+    const seenNames = new Set<string>();
+
+    // Try multiple queries to get diverse results
+    for (const query of queries) {
+      try {
+        const places = await this.searchPlaces(query, { limit: 5 });
+        for (const place of places) {
+          // Avoid duplicates based on name
+          const normalizedName = place.name.toLowerCase().trim();
+          if (!seenNames.has(normalizedName)) {
+            seenNames.add(normalizedName);
+            allPlaces.push(place);
+          }
+        }
+        
+        if (allPlaces.length >= limit) {
+          break;
+        }
+      } catch (error) {
+        console.warn(`Failed to search with query "${query}":`, error);
+        continue;
+      }
+    }
+
+    return allPlaces.slice(0, limit);
+  }
+
+  /**
    * Cache helper methods
    */
   private async getFromCache(key: string): Promise<any | null> {
