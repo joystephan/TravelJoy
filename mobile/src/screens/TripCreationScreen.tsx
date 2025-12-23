@@ -91,12 +91,28 @@ export default function TripCreationScreen({
       return false;
     }
 
+    // Try to parse dates - support multiple formats
     const start = new Date(startDate);
     const end = new Date(endDate);
-    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
-      Alert.alert("Validation Error", "Please enter valid dates (YYYY-MM-DD)");
+    
+    if (isNaN(start.getTime())) {
+      Alert.alert("Validation Error", `Invalid start date: "${startDate}"\n\nPlease use format: YYYY-MM-DD\nExample: 2026-12-25`);
       return false;
     }
+    
+    if (isNaN(end.getTime())) {
+      Alert.alert("Validation Error", `Invalid end date: "${endDate}"\n\nPlease use format: YYYY-MM-DD\nExample: 2026-12-31`);
+      return false;
+    }
+    
+    // Check if start date is in the past
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (start < today) {
+      Alert.alert("Validation Error", "Start date cannot be in the past");
+      return false;
+    }
+    
     if (end <= start) {
       Alert.alert("Validation Error", "End date must be after start date");
       return false;
@@ -225,15 +241,17 @@ export default function TripCreationScreen({
           {/* Date Pickers */}
           <View style={styles.card}>
             <Text style={styles.cardLabel}>📅 Travel Dates</Text>
+            <Text style={styles.cardHint}>Format: YYYY-MM-DD (e.g., 2026-12-25)</Text>
             <View style={styles.dateRow}>
               <View style={styles.dateInput}>
                 <Text style={styles.dateLabel}>Start Date</Text>
                 <TextInput
                   style={styles.dateField}
-                  placeholder="YYYY-MM-DD"
+                  placeholder="2026-12-25"
                   placeholderTextColor={colors.textLight}
                   value={startDate}
                   onChangeText={setStartDate}
+                  keyboardType="numbers-and-punctuation"
                 />
               </View>
               <Text style={styles.dateSeparator}>→</Text>
@@ -241,10 +259,11 @@ export default function TripCreationScreen({
                 <Text style={styles.dateLabel}>End Date</Text>
                 <TextInput
                   style={styles.dateField}
-                  placeholder="YYYY-MM-DD"
+                  placeholder="2026-12-31"
                   placeholderTextColor={colors.textLight}
                   value={endDate}
                   onChangeText={setEndDate}
+                  keyboardType="numbers-and-punctuation"
                 />
               </View>
             </View>

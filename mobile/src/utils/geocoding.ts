@@ -61,15 +61,18 @@ export async function geocodeDestination(
   }
 
   try {
-    // Use Nominatim API (free, no API key required)
+    // Use LocationIQ API with manual timeout implementation for React Native
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+    
     const response = await fetch(
-      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&limit=1`,
+      `https://us1.locationiq.com/v1/search.php?key=pk.44c3f34a6e224bb5d8f41044718dc07d&q=${encodeURIComponent(searchQuery)}&format=json&limit=1`,
       {
-        headers: {
-          'User-Agent': 'TravelJoy/1.0', // Required by Nominatim
-        },
+        signal: controller.signal,
       }
     );
+
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       console.warn(`Geocoding failed for ${searchQuery}: ${response.statusText}`);
@@ -131,8 +134,14 @@ export async function geocodeDestination(
     geocodeCache.set(cacheKey, coordinates);
 
     return coordinates;
-  } catch (error) {
-    console.error(`Error geocoding ${searchQuery}:`, error);
+  } catch (error: any) {
+    // Handle abort/timeout error
+    if (error.name === 'AbortError') {
+      console.warn(`Geocoding timeout for ${searchQuery}`);
+    } else {
+      console.error(`Error geocoding ${searchQuery}:`, error);
+    }
+    
     // Only retry once if we haven't already retried
     if (destinationContext && !retryWithoutContext) {
       return geocodeDestination(cleanLocationName, undefined, true);

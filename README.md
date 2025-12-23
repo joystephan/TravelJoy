@@ -10,21 +10,454 @@
 
 ---
 
-## ⚡ Quick Start (2 Minutes)
+## 📋 Table of Contents
+
+- [🚀 How to Run the App](#-how-to-run-the-app) - Complete setup and running instructions
+- [🔄 How to Update the App](#-how-to-update-the-app) - Update dependencies and code
+- [⚙️ Environment Configuration](#️-environment-configuration) - API keys and settings
+- [💻 Development Commands](#-development-commands-reference) - Useful commands
+- [🧪 Testing](#-testing-the-app) - How to test features
+- [🐛 Troubleshooting](#-troubleshooting-common-issues) - Common problems & solutions
+- [📱 Features](#-features-overview) - What the app does
+- [🏗️ Technical Architecture](#️-technical-architecture) - Technologies used
+- [📚 Additional Documentation](#-additional-documentation) - More resources
+
+---
+
+## 🚀 How to Run the App
+
+Follow these instructions to get TravelJoy running on your machine.
+
+### Prerequisites
+
+Before starting, ensure you have installed:
+
+- ✅ **Node.js 18+** - [Download here](https://nodejs.org/)
+  ```bash
+  node --version  # Should show v18 or higher
+  ```
+
+- ✅ **Docker Desktop** - [Download here](https://www.docker.com/products/docker-desktop)
+  ```bash
+  docker --version  # Verify Docker is installed
+  ```
+
+- ✅ **iOS Simulator** (Mac only) or **Android Studio** (all platforms)
+  - Mac: Comes with Xcode (install from App Store)
+  - Windows/Linux: [Install Android Studio](https://developer.android.com/studio)
+
+### Step 1: Clone the Repository
 
 ```bash
-# 1. Start databases
+# Clone the repository
+git clone <your-repo-url>
+cd travelJoy
+```
+
+### Step 2: Start Database Services
+
+Open a terminal in the project root and run:
+
+```bash
+# Start PostgreSQL and Redis with Docker
 docker-compose up -d
 
-# 2. Setup backend (Terminal 1)
-cd backend && npm install && npm run prisma:generate && npm run prisma:migrate && npm run dev
+# Verify services are running
+docker ps
+# You should see: traveljoy-postgres and traveljoy-redis containers running
+```
 
-# 3. Setup mobile app (Terminal 2)  
-cd mobile && npm install && npm start
+**✅ Success indicators:**
+- Both containers should show "Up" status
+- No error messages in the output
+
+**Troubleshooting:**
+- If port 5432 is already in use: `docker-compose down` and check other Postgres instances
+- If Docker isn't starting: Make sure Docker Desktop is running
+
+### Step 3: Setup Backend API
+
+Open a **new terminal window** and run:
+
+```bash
+# Navigate to backend folder
+cd backend
+
+# Install dependencies (this may take 2-3 minutes)
+npm install
+
+# Create environment file (if it doesn't exist)
+cp .env.example .env
+# Edit .env if needed (default values work for local development)
+
+# Generate Prisma client
+npm run prisma:generate
+
+# Run database migrations (creates tables)
+npm run prisma:migrate
+
+# Start the backend server
+npm run dev
+```
+
+**✅ Success indicators:**
+- You should see: `Server running on port 3000`
+- API is ready at: `http://localhost:3000`
+- No error messages
+
+**Keep this terminal running!**
+
+### Step 4: Setup Mobile App
+
+Open **another new terminal window** and run:
+
+```bash
+# Navigate to mobile folder
+cd mobile
+
+# Install dependencies (this may take 3-5 minutes)
+npm install
+
+# Create .env file (if it doesn't exist)
+echo 'EXPO_PUBLIC_API_URL=http://localhost:3000' > .env
+
+# For physical device testing, update .env with your computer's IP:
+# EXPO_PUBLIC_API_URL=http://192.168.1.XXX:3000
+
+# Start Expo development server
+npm start
+```
+
+**✅ Success indicators:**
+- You should see a QR code in the terminal
+- Expo DevTools should open in your browser
+- Message: "Metro waiting on exp://..."
+
+**Keep this terminal running too!**
+
+### Step 5: Launch the App
+
+You now have 3 options to run the app:
+
+#### Option A: iOS Simulator (Mac only) - Recommended
+
+In the Expo terminal, press:
+```
+i
+```
+
+The iOS Simulator will open automatically and install the app.
+
+**First time setup:**
+- Allow 1-2 minutes for the initial build
+- The app will automatically reload when ready
+
+#### Option B: Android Emulator (All platforms)
+
+1. **First, start an Android emulator:**
+   - Open Android Studio
+   - Go to: Tools → Device Manager
+   - Create/Start a virtual device (if you haven't already)
+
+2. **Then in the Expo terminal, press:**
+   ```
+   a
+   ```
+
+The app will install on the Android emulator.
+
+#### Option C: Physical Device with Expo Go
+
+1. **Install Expo Go app:**
+   - iOS: [App Store](https://apps.apple.com/app/expo-go/id982107779)
+   - Android: [Play Store](https://play.google.com/store/apps/details?id=host.exp.exponent)
+
+2. **Scan the QR code:**
+   - iOS: Use Camera app to scan the QR code in terminal
+   - Android: Open Expo Go app and scan with built-in scanner
+
+3. **Important for physical devices:**
+   - Update `mobile/.env` with your computer's local IP address
+   - Find your IP: `ifconfig | grep "inet " | grep -v 127.0.0.1` (Mac/Linux)
+   - Or: `ipconfig | findstr IPv4` (Windows)
+
+### Step 6: Verify Everything is Working
+
+You should now see the TravelJoy login screen!
+
+**Test the app:**
+1. **Create an account:**
+   - Tap "Sign Up"
+   - Enter your details
+   - Tap "Create Account"
+
+2. **Explore the app:**
+   - Browse destinations on the Explore screen
+   - Create a trip
+   - View trip details with timeline
+
+### Quick Start (All-in-One)
+
+If you've already set up the project before:
+
+```bash
+# Terminal 1: Start databases
+docker-compose up -d
+
+# Terminal 2: Start backend
+cd backend && npm run dev
+
+# Terminal 3: Start mobile app
+cd mobile && npm start
 # Then press 'i' for iOS or 'a' for Android
 ```
 
-📖 **New to the project?** Read the [Step-by-Step Guide](#-quick-start-guide) below!
+---
+
+## 🔄 How to Update the App
+
+Follow these instructions to update the TravelJoy application with the latest changes.
+
+### Updating Dependencies
+
+#### Update Backend Dependencies
+
+```bash
+# Navigate to backend folder
+cd backend
+
+# Check for outdated packages
+npm outdated
+
+# Update all dependencies to latest versions
+npm update
+
+# Or update specific package
+npm install <package-name>@latest
+
+# After updating, regenerate Prisma client
+npm run prisma:generate
+
+# If database schema changed, run migrations
+npm run prisma:migrate
+```
+
+#### Update Mobile Dependencies
+
+```bash
+# Navigate to mobile folder
+cd mobile
+
+# Check for outdated packages
+npm outdated
+
+# Update all dependencies to latest versions
+npm update
+
+# Or update specific package
+npm install <package-name>@latest
+
+# Clear Metro bundler cache after updates
+npx expo start --clear
+```
+
+### Updating from Git Repository
+
+#### Pull Latest Changes
+
+```bash
+# Navigate to project root
+cd travelJoy
+
+# Pull latest changes from repository
+git pull origin main
+
+# Or if you're on a different branch
+git pull origin <branch-name>
+```
+
+#### After Pulling Changes
+
+**1. Update Backend:**
+```bash
+cd backend
+
+# Install any new dependencies
+npm install
+
+# Regenerate Prisma client (if schema changed)
+npm run prisma:generate
+
+# Run new migrations (if any)
+npm run prisma:migrate
+
+# Restart the server
+npm run dev
+```
+
+**2. Update Mobile:**
+```bash
+cd mobile
+
+# Install any new dependencies
+npm install
+
+# Clear cache and restart
+npx expo start --clear
+```
+
+### Updating Database Schema
+
+If the database schema has been updated:
+
+```bash
+cd backend
+
+# Generate Prisma client with new schema
+npm run prisma:generate
+
+# Create and apply new migration
+npm run prisma:migrate
+
+# Or if you need to reset the database (⚠️ deletes all data)
+npm run prisma:migrate:reset
+```
+
+### Updating Environment Variables
+
+If new environment variables were added:
+
+**Backend:**
+```bash
+cd backend
+
+# Check .env.example for new variables
+cat .env.example
+
+# Update your .env file with new variables
+# Edit .env file manually or:
+cp .env.example .env  # (⚠️ This overwrites your existing .env)
+# Then manually add back your API keys and secrets
+```
+
+**Mobile:**
+```bash
+cd mobile
+
+# Check if new environment variables are needed
+# Update .env file if needed
+echo 'EXPO_PUBLIC_API_URL=http://localhost:3000' > .env
+```
+
+### Updating Docker Services
+
+If `docker-compose.yml` was updated:
+
+```bash
+# Stop existing containers
+docker-compose down
+
+# Pull latest images (if specified)
+docker-compose pull
+
+# Start with new configuration
+docker-compose up -d
+
+# Check logs if needed
+docker-compose logs -f
+```
+
+### Complete Update Workflow
+
+Here's the complete workflow for updating everything:
+
+```bash
+# 1. Pull latest code
+git pull origin main
+
+# 2. Update databases (if docker-compose.yml changed)
+docker-compose down
+docker-compose up -d
+
+# 3. Update backend
+cd backend
+npm install
+npm run prisma:generate
+npm run prisma:migrate
+# Restart: npm run dev
+
+# 4. Update mobile
+cd ../mobile
+npm install
+npx expo start --clear
+```
+
+### Troubleshooting Updates
+
+**Issue: "Module not found" after update**
+```bash
+# Clear node_modules and reinstall
+rm -rf node_modules package-lock.json
+npm install
+```
+
+**Issue: "Prisma client not generated"**
+```bash
+cd backend
+npm run prisma:generate
+```
+
+**Issue: "Database migration failed"**
+```bash
+cd backend
+# Check migration status
+npm run prisma:migrate status
+
+# If needed, reset and reapply (⚠️ deletes data)
+npm run prisma:migrate:reset
+```
+
+**Issue: "Expo cache issues"**
+```bash
+cd mobile
+npx expo start --clear
+# Or completely reset
+rm -rf node_modules .expo
+npm install
+npx expo start --clear
+```
+
+### Version Compatibility
+
+Always check these compatibility requirements:
+
+- **Node.js**: 18+ required
+- **PostgreSQL**: 12+ (Docker uses 15)
+- **Redis**: 6+ (Docker uses 7)
+- **Expo SDK**: 54
+- **React Native**: 0.81
+
+### Updating to Major Versions
+
+⚠️ **Warning**: Major version updates may require code changes.
+
+**Before updating major versions:**
+1. Check the changelog for breaking changes
+2. Test in a separate branch
+3. Update dependencies one at a time
+4. Test thoroughly before merging
+
+**Example - Updating React Native:**
+```bash
+# Check current version
+npm list react-native
+
+# Read migration guide
+# https://react-native-community.github.io/upgrade-helper/
+
+# Update following the guide
+npx react-native upgrade
+```
 
 ---
 
@@ -55,185 +488,6 @@ The mobile app now features a beautiful, modern UI with:
 - 🧭 **Improved Navigation** - Modern tab bar with shadows and icons
 
 📖 See [FRONTEND_IMPLEMENTATION_SUMMARY.md](./FRONTEND_IMPLEMENTATION_SUMMARY.md) for details.
-
----
-
-## 🚀 Quick Start Guide
-
-Follow these steps to get TravelJoy running on your machine in under 10 minutes!
-
-### Prerequisites Checklist
-
-Before starting, ensure you have:
-
-- ✅ **Node.js 18+** - [Download here](https://nodejs.org/)
-  ```bash
-  node --version  # Should show v18 or higher
-  ```
-
-- ✅ **Docker Desktop** - [Download here](https://www.docker.com/products/docker-desktop)
-  ```bash
-  docker --version  # Verify Docker is installed
-  ```
-
-- ✅ **iOS Simulator** (Mac only) or **Android Studio** (all platforms)
-  - Mac: Comes with Xcode (install from App Store)
-  - Windows/Linux: [Install Android Studio](https://developer.android.com/studio)
-
----
-
-## 📋 Step-by-Step Setup
-
-### Step 1: Clone and Navigate to Project
-
-```bash
-# Clone the repository (if you haven't already)
-git clone <your-repo-url>
-cd TravelJoy
-```
-
-### Step 2: Start Database Services
-
-```bash
-# Start PostgreSQL and Redis with Docker
-docker-compose up -d
-
-# Verify services are running
-docker ps
-# You should see: postgres and redis containers running
-```
-
-**Troubleshooting:**
-- If port 5432 is already in use: `docker-compose down` and check other Postgres instances
-- If Docker isn't starting: Make sure Docker Desktop is running
-
----
-
-### Step 3: Setup Backend API
-
-Open a **new terminal window** and run:
-
-```bash
-# Navigate to backend folder
-cd backend
-
-# Install dependencies (this may take 2-3 minutes)
-npm install
-
-# Create environment file
-cp .env.example .env
-# Edit .env if needed (default values work for local development)
-
-# Generate Prisma client
-npm run prisma:generate
-
-# Run database migrations (creates tables)
-npm run prisma:migrate
-
-# Start the backend server
-npm run dev
-```
-
-**✅ Success indicators:**
-- You should see: `Server running on port 3000`
-- API is ready at: `http://localhost:3000`
-
-**Keep this terminal running!**
-
----
-
-### Step 4: Setup Mobile App
-
-Open **another new terminal window** and run:
-
-```bash
-# Navigate to mobile folder
-cd mobile
-
-# Install dependencies (this may take 3-5 minutes)
-npm install
-
-# Start Expo development server
-npm start
-```
-
-**✅ Success indicators:**
-- You should see a QR code in the terminal
-- Expo DevTools should open in your browser
-- Message: "Metro waiting on exp://..."
-
-**Keep this terminal running too!**
-
----
-
-### Step 5: Launch the App
-
-You now have 3 options to run the app:
-
-#### Option A: iOS Simulator (Mac only) - Recommended
-
-In the Expo terminal, press:
-```
-i
-```
-
-The iOS Simulator will open automatically and install the app.
-
-**First time setup:**
-- Allow 1-2 minutes for the initial build
-- The app will automatically reload when ready
-
----
-
-#### Option B: Android Emulator (All platforms)
-
-1. **First, start an Android emulator:**
-   - Open Android Studio
-   - Go to: Tools → Device Manager
-   - Create/Start a virtual device (if you haven't already)
-
-2. **Then in the Expo terminal, press:**
-   ```
-   a
-   ```
-
-The app will install on the Android emulator.
-
----
-
-#### Option C: Physical Device with Expo Go
-
-1. **Install Expo Go app:**
-   - iOS: [App Store](https://apps.apple.com/app/expo-go/id982107779)
-   - Android: [Play Store](https://play.google.com/store/apps/details?id=host.exp.exponent)
-
-2. **Scan the QR code:**
-   - iOS: Use Camera app to scan the QR code in terminal
-   - Android: Open Expo Go app and scan with built-in scanner
-
----
-
-## 🎉 You're All Set!
-
-You should now see the TravelJoy login screen!
-
-### What You Should See:
-
-1. **Login Screen** with the ✈️ TravelJoy logo
-2. Beautiful turquoise theme
-3. Email and password fields
-
-### Test the App:
-
-1. **Create an account:**
-   - Tap "Sign Up"
-   - Enter your details
-   - Tap "Create Account"
-
-2. **Explore the app:**
-   - Browse destinations on the Explore screen
-   - Create a trip
-   - View trip details with timeline
 
 ---
 
@@ -311,7 +565,7 @@ npm install -g expo-cli
 
 ## 🔄 Daily Development Workflow
 
-Once everything is set up, here's how to start your development session:
+Once everything is set up (see [How to Run the App](#-how-to-run-the-app)), here's how to start your development session:
 
 ```bash
 # Terminal 1: Start databases (only if not already running)
@@ -326,6 +580,8 @@ cd mobile
 npm start
 # Then press 'i' for iOS or 'a' for Android
 ```
+
+**Note:** For first-time setup, see the complete [How to Run the App](#-how-to-run-the-app) guide above.
 
 ---
 
@@ -967,8 +1223,9 @@ ISC License - See [LICENSE](./LICENSE) file for details
 
 ### Quick Links
 
-- 📖 [Documentation](#-additional-documentation)
-- 🚀 [Quick Start](#-quick-start-guide)
-- 💻 [Development](#-development-commands-reference)
+- 🚀 [How to Run the App](#-how-to-run-the-app)
+- 🔄 [How to Update the App](#-how-to-update-the-app)
+- 📖 [Additional Documentation](#-additional-documentation)
+- 💻 [Development Commands](#-development-commands-reference)
 - 🧪 [Testing](#-testing-the-app)
 - 🐛 [Troubleshooting](#-troubleshooting-common-issues)

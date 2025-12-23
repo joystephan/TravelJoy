@@ -28,8 +28,8 @@ interface SearchOptions {
 }
 
 class NominatimService {
-  private baseUrl = "https://nominatim.openstreetmap.org";
-  private userAgent = "TravelJoy/1.0";
+  private baseUrl = "https://us1.locationiq.com/v1";
+  private apiKey = process.env.LOCATIONIQ_API_KEY || "pk.44c3f34a6e224bb5d8f41044718dc07d";
   private cacheExpiry = 86400; // 24 hours in seconds
 
   /**
@@ -48,22 +48,18 @@ class NominatimService {
     }
 
     try {
-      // Rate limiting: wait 1 second between requests
-      await this.rateLimit();
-
       const params = {
         q: query,
+        key: this.apiKey,
         format: "json",
         addressdetails: options.addressDetails ? 1 : 0,
         limit: options.limit || 10,
         ...(options.countryCode && { countrycodes: options.countryCode }),
       };
 
-      const response = await axios.get(`${this.baseUrl}/search`, {
+      const response = await axios.get(`${this.baseUrl}/search.php`, {
         params,
-        headers: {
-          "User-Agent": this.userAgent,
-        },
+        timeout: 10000,
       });
 
       const places = this.mapToPlaces(response.data);
@@ -73,7 +69,10 @@ class NominatimService {
 
       return places;
     } catch (error) {
-      console.error("Nominatim search error:", error);
+      console.error("LocationIQ search error:", error);
+      if (axios.isAxiosError(error) && error.code === 'ECONNABORTED') {
+        throw new Error("LocationIQ API request timed out.");
+      }
       throw new Error("Failed to search places");
     }
   }
@@ -91,17 +90,14 @@ class NominatimService {
     }
 
     try {
-      await this.rateLimit();
-
-      const response = await axios.get(`${this.baseUrl}/search`, {
+      const response = await axios.get(`${this.baseUrl}/search.php`, {
         params: {
           q: address,
+          key: this.apiKey,
           format: "json",
           limit: 1,
         },
-        headers: {
-          "User-Agent": this.userAgent,
-        },
+        timeout: 10000,
       });
 
       if (response.data.length === 0) {
@@ -118,7 +114,10 @@ class NominatimService {
 
       return coordinates;
     } catch (error) {
-      console.error("Nominatim geocode error:", error);
+      console.error("LocationIQ geocode error:", error);
+      if (axios.isAxiosError(error) && error.code === 'ECONNABORTED') {
+        throw new Error("LocationIQ API request timed out.");
+      }
       throw new Error("Failed to geocode address");
     }
   }
@@ -136,18 +135,15 @@ class NominatimService {
     }
 
     try {
-      await this.rateLimit();
-
-      const response = await axios.get(`${this.baseUrl}/reverse`, {
+      const response = await axios.get(`${this.baseUrl}/reverse.php`, {
         params: {
           lat,
           lon,
+          key: this.apiKey,
           format: "json",
           addressdetails: 1,
         },
-        headers: {
-          "User-Agent": this.userAgent,
-        },
+        timeout: 10000,
       });
 
       if (!response.data || response.data.error) {
@@ -161,7 +157,10 @@ class NominatimService {
 
       return place;
     } catch (error) {
-      console.error("Nominatim reverse geocode error:", error);
+      console.error("LocationIQ reverse geocode error:", error);
+      if (axios.isAxiosError(error) && error.code === 'ECONNABORTED') {
+        throw new Error("LocationIQ API request timed out.");
+      }
       throw new Error("Failed to reverse geocode coordinates");
     }
   }
@@ -179,17 +178,14 @@ class NominatimService {
     }
 
     try {
-      await this.rateLimit();
-
-      const response = await axios.get(`${this.baseUrl}/lookup`, {
+      const response = await axios.get(`${this.baseUrl}/lookup.php`, {
         params: {
           osm_ids: `${osmType[0].toUpperCase()}${osmId}`,
+          key: this.apiKey,
           format: "json",
           addressdetails: 1,
         },
-        headers: {
-          "User-Agent": this.userAgent,
-        },
+        timeout: 10000,
       });
 
       if (response.data.length === 0) {
@@ -203,7 +199,10 @@ class NominatimService {
 
       return place;
     } catch (error) {
-      console.error("Nominatim place details error:", error);
+      console.error("LocationIQ place details error:", error);
+      if (axios.isAxiosError(error) && error.code === 'ECONNABORTED') {
+        throw new Error("LocationIQ API request timed out.");
+      }
       throw new Error("Failed to get place details");
     }
   }
@@ -240,24 +239,6 @@ class NominatimService {
     };
   }
 
-  /**
-   * Rate limiting: Nominatim allows 1 request per second
-   */
-  private async rateLimit(): Promise<void> {
-    const lastRequestKey = "nominatim:lastRequest";
-    const lastRequest = await redisClient.get(lastRequestKey);
-
-    if (lastRequest) {
-      const timeSinceLastRequest = Date.now() - parseInt(lastRequest);
-      if (timeSinceLastRequest < 1000) {
-        await new Promise((resolve) =>
-          setTimeout(resolve, 1000 - timeSinceLastRequest)
-        );
-      }
-    }
-
-    await redisClient.set(lastRequestKey, Date.now().toString(), "EX", 2);
-  }
 
   /**
    * Cache helper methods

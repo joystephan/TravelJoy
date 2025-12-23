@@ -60,15 +60,12 @@ interface WeatherAlert {
 }
 
 class WeatherService {
-  private apiKey: string;
-  private baseUrl = "https://api.openweathermap.org/data/2.5";
+  private baseUrl = "https://api.open-meteo.com/v1";
   private cacheExpiry = 3600; // 1 hour in seconds
 
   constructor() {
-    this.apiKey = process.env.OPENWEATHER_API_KEY || "";
-    if (!this.apiKey) {
-      console.warn("OpenWeatherMap API key not configured");
-    }
+    // Open-Meteo is free and doesn't require an API key
+    console.log("Using Open-Meteo weather service (no API key required)");
   }
 
   /**
@@ -84,23 +81,23 @@ class WeatherService {
     }
 
     try {
-      const response = await axios.get(`${this.baseUrl}/weather`, {
+      const response = await axios.get(`${this.baseUrl}/forecast`, {
         params: {
-          lat: coordinates.lat,
-          lon: coordinates.lon,
-          appid: this.apiKey,
-          units: "metric",
+          latitude: coordinates.lat,
+          longitude: coordinates.lon,
+          current: "temperature_2m,relative_humidity_2m,wind_speed_10m,wind_direction_10m,weather_code",
+          timezone: "auto",
         },
       });
 
-      const weather = this.mapCurrentWeather(response.data);
+      const weather = this.mapOpenMeteoCurrentWeather(response.data);
 
       // Cache the result
       await this.saveToCache(cacheKey, weather);
 
       return weather;
     } catch (error) {
-      console.error("OpenWeatherMap current weather error:", error);
+      console.error("Open-Meteo current weather error:", error);
       throw new Error("Failed to fetch current weather");
     }
   }
@@ -123,22 +120,22 @@ class WeatherService {
     try {
       const response = await axios.get(`${this.baseUrl}/forecast`, {
         params: {
-          lat: coordinates.lat,
-          lon: coordinates.lon,
-          appid: this.apiKey,
-          units: "metric",
-          cnt: days * 8, // 8 data points per day (3-hour intervals)
+          latitude: coordinates.lat,
+          longitude: coordinates.lon,
+          daily: "weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max",
+          timezone: "auto",
+          forecast_days: days,
         },
       });
 
-      const forecast = this.mapForecast(response.data);
+      const forecast = this.mapOpenMeteoForecast(response.data);
 
       // Cache the result
       await this.saveToCache(cacheKey, forecast);
 
       return forecast;
     } catch (error) {
-      console.error("OpenWeatherMap forecast error:", error);
+      console.error("Open-Meteo forecast error:", error);
       throw new Error("Failed to fetch weather forecast");
     }
   }
@@ -318,79 +315,94 @@ class WeatherService {
   }
 
   /**
-   * Map OpenWeatherMap current weather response
+   * Map Open-Meteo current weather response
    */
-  private mapCurrentWeather(data: any): CurrentWeather {
+  private mapOpenMeteoCurrentWeather(data: any): CurrentWeather {
+    const current = data.current;
     return {
-      temperature: data.main.temp,
-      feelsLike: data.main.feels_like,
-      humidity: data.main.humidity,
-      pressure: data.main.pressure,
-      windSpeed: data.wind.speed,
-      windDirection: data.wind.deg,
-      cloudiness: data.clouds.all,
-      visibility: data.visibility,
-      conditions: data.weather.map((w: any) => ({
-        id: w.id,
-        main: w.main,
-        description: w.description,
-        icon: w.icon,
-      })),
-      timestamp: new Date(data.dt * 1000),
+      temperature: current.temperature_2m || 20,
+      feelsLike: current.temperature_2m || 20,
+      humidity: current.relative_humidity_2m || 50,
+      pressure: 1013,
+      windSpeed: current.wind_speed_10m || 0,
+      windDirection: current.wind_direction_10m || 0,
+      cloudiness: 0,
+      visibility: 10000,
+      conditions: [{
+        id: current.weather_code || 0,
+        main: this.getWeatherDescription(current.weather_code || 0),
+        description: this.getWeatherDescription(current.weather_code || 0),
+        icon: "01d",
+      }],
+      timestamp: new Date(),
     };
   }
 
   /**
-   * Map OpenWeatherMap forecast response
+   * Map Open-Meteo forecast response
    */
-  private mapForecast(data: any): ForecastDay[] {
-    const dailyData: { [key: string]: any[] } = {};
+  private mapOpenMeteoForecast(data: any): ForecastDay[] {
+    const daily = data.daily;
+    const forecast: ForecastDay[] = [];
 
-    // Group forecast data by day
-    data.list.forEach((item: any) => {
-      const date = new Date(item.dt * 1000).toISOString().split("T")[0];
-      if (!dailyData[date]) {
-        dailyData[date] = [];
-      }
-      dailyData[date].push(item);
-    });
-
-    // Convert to ForecastDay array
-    return Object.entries(dailyData).map(([date, items]) => {
-      const temps = items.map((i) => i.main.temp);
-      const conditions = items[0].weather;
-
-      return {
-        date: new Date(date),
+    for (let i = 0; i < daily.time.length; i++) {
+      forecast.push({
+        date: new Date(daily.time[i]),
         temperature: {
-          min: Math.min(...temps),
-          max: Math.max(...temps),
-          day:
-            items.find((i) => {
-              const hour = new Date(i.dt * 1000).getHours();
-              return hour >= 12 && hour <= 15;
-            })?.main.temp || temps[0],
-          night:
-            items.find((i) => {
-              const hour = new Date(i.dt * 1000).getHours();
-              return hour >= 0 && hour <= 3;
-            })?.main.temp || temps[temps.length - 1],
+          min: daily.temperature_2m_min[i] || 15,
+          max: daily.temperature_2m_max[i] || 25,
+          day: (daily.temperature_2m_max[i] + daily.temperature_2m_min[i]) / 2 || 20,
+          night: daily.temperature_2m_min[i] || 15,
         },
-        humidity: items[0].main.humidity,
-        windSpeed: items[0].wind.speed,
-        conditions: conditions.map((w: any) => ({
-          id: w.id,
-          main: w.main,
-          description: w.description,
-          icon: w.icon,
-        })),
-        precipitation: items.reduce((sum: number, i: any) => {
-          return sum + (i.rain?.["3h"] || 0);
-        }, 0),
-        cloudiness: items[0].clouds.all,
-      };
-    });
+        humidity: 50,
+        windSpeed: daily.wind_speed_10m_max[i] || 0,
+        conditions: [{
+          id: daily.weather_code[i] || 0,
+          main: this.getWeatherDescription(daily.weather_code[i] || 0),
+          description: this.getWeatherDescription(daily.weather_code[i] || 0),
+          icon: "01d",
+        }],
+        precipitation: daily.precipitation_sum[i] || 0,
+        cloudiness: 0,
+      });
+    }
+
+    return forecast;
   }
+
+  /**
+   * Convert WMO weather code to description
+   */
+  private getWeatherDescription(code: number): string {
+    const weatherCodes: Record<number, string> = {
+      0: "Clear sky",
+      1: "Mainly clear",
+      2: "Partly cloudy",
+      3: "Overcast",
+      45: "Foggy",
+      48: "Foggy",
+      51: "Light drizzle",
+      53: "Moderate drizzle",
+      55: "Dense drizzle",
+      61: "Slight rain",
+      63: "Moderate rain",
+      65: "Heavy rain",
+      71: "Slight snow",
+      73: "Moderate snow",
+      75: "Heavy snow",
+      77: "Snow grains",
+      80: "Slight rain showers",
+      81: "Moderate rain showers",
+      82: "Violent rain showers",
+      85: "Slight snow showers",
+      86: "Heavy snow showers",
+      95: "Thunderstorm",
+      96: "Thunderstorm with hail",
+      99: "Thunderstorm with heavy hail",
+    };
+    return weatherCodes[code] || "Unknown";
+  }
+
 
   /**
    * Cache helper methods
