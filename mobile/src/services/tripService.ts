@@ -1,12 +1,11 @@
 import api from "./api";
 import { Trip, TravelPreferences } from "../types";
-import { getIsOnline } from "../utils/networkStatus";
 import {
   getTripsOffline,
   saveTripOffline,
   deleteTripOffline,
-  addPendingSyncOperation,
 } from "../utils/offlineStorage";
+import { requireOnline, queueForSync, isOnline } from "../utils/offlineHelper";
 
 export interface CreateTripInput {
   destination: string;
@@ -28,12 +27,9 @@ export interface UpdateActivityInput {
 
 class TripService {
   async createTrip(tripData: CreateTripInput): Promise<Trip> {
-    if (!getIsOnline()) {
+    if (!isOnline()) {
       // Queue for sync when online
-      await addPendingSyncOperation({
-        type: "CREATE_TRIP",
-        data: tripData,
-      });
+      await queueForSync("CREATE_TRIP", tripData);
 
       // Create temporary offline trip
       const offlineTrip: Trip = {
@@ -72,7 +68,7 @@ class TripService {
   }
 
   async getTripById(tripId: string): Promise<Trip> {
-    if (!getIsOnline()) {
+    if (!isOnline()) {
       const trips = await getTripsOffline();
       const trip = trips.find((t) => t.id === tripId);
       if (!trip) {
@@ -89,7 +85,7 @@ class TripService {
   }
 
   async getUserTrips(): Promise<Trip[]> {
-    if (!getIsOnline()) {
+    if (!isOnline()) {
       return await getTripsOffline();
     }
 
@@ -115,11 +111,8 @@ class TripService {
     activityId: string,
     updates: UpdateActivityInput
   ): Promise<any> {
-    if (!getIsOnline()) {
-      await addPendingSyncOperation({
-        type: "UPDATE_ACTIVITY",
-        data: { activityId, updates },
-      });
+    if (!isOnline()) {
+      await queueForSync("UPDATE_ACTIVITY", { activityId, updates });
 
       // Update local data optimistically
       // This would require more complex local state management
@@ -131,11 +124,8 @@ class TripService {
   }
 
   async deleteActivity(activityId: string): Promise<void> {
-    if (!getIsOnline()) {
-      await addPendingSyncOperation({
-        type: "UPDATE_ACTIVITY",
-        data: { activityId, updates: { deleted: true } },
-      });
+    if (!isOnline()) {
+      await queueForSync("UPDATE_ACTIVITY", { activityId, updates: { deleted: true } });
       return;
     }
 
@@ -146,9 +136,7 @@ class TripService {
     activityId: string,
     newActivity: UpdateActivityInput
   ): Promise<any> {
-    if (!getIsOnline()) {
-      throw new Error("Cannot replace activities while offline");
-    }
+    requireOnline("replace activities");
 
     const response = await api.post(
       `/api/trips/activities/${activityId}/replace`,
@@ -171,11 +159,8 @@ class TripService {
       imageUrl: string;
     }>
   ): Promise<any> {
-    if (!getIsOnline()) {
-      await addPendingSyncOperation({
-        type: "UPDATE_MEAL",
-        data: { mealId, updates },
-      });
+    if (!isOnline()) {
+      await queueForSync("UPDATE_MEAL", { mealId, updates });
 
       // Update local data optimistically
       return { id: mealId, ...updates };
@@ -186,11 +171,8 @@ class TripService {
   }
 
   async deleteMeal(mealId: string): Promise<void> {
-    if (!getIsOnline()) {
-      await addPendingSyncOperation({
-        type: "DELETE_MEAL",
-        data: { mealId },
-      });
+    if (!isOnline()) {
+      await queueForSync("DELETE_MEAL", { mealId });
       return;
     }
 
@@ -204,9 +186,7 @@ class TripService {
       preferences?: TravelPreferences;
     }
   ): Promise<Trip> {
-    if (!getIsOnline()) {
-      throw new Error("Cannot optimize trips while offline");
-    }
+    requireOnline("optimize trips");
 
     const response = await api.post(`/api/trips/${tripId}/optimize`, constraints);
     const trip = response.data;
@@ -215,11 +195,8 @@ class TripService {
   }
 
   async deleteTrip(tripId: string): Promise<void> {
-    if (!getIsOnline()) {
-      await addPendingSyncOperation({
-        type: "DELETE_TRIP",
-        data: { tripId },
-      });
+    if (!isOnline()) {
+      await queueForSync("DELETE_TRIP", { tripId });
       await deleteTripOffline(tripId);
       return;
     }

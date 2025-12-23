@@ -2,11 +2,12 @@
 
 > An intelligent mobile application that simplifies travel planning by using AI to generate personalized multi-day travel schedules.
 
-![Status](https://img.shields.io/badge/status-ready%20for%20testing-brightgreen)
+![Status](https://img.shields.io/badge/status-production%20ready-brightgreen)
 ![React Native](https://img.shields.io/badge/React%20Native-v0.81-blue)
 ![Expo](https://img.shields.io/badge/Expo-SDK%2054-blue)
 ![TypeScript](https://img.shields.io/badge/TypeScript-v5.9-blue)
 ![Node.js](https://img.shields.io/badge/Node.js-18+-green)
+![Package Manager](https://img.shields.io/badge/package%20manager-yarn-2C8EBB)
 
 ---
 
@@ -36,6 +37,13 @@ Before starting, ensure you have installed:
   ```bash
   node --version  # Should show v18 or higher
   ```
+
+- ✅ **Yarn Package Manager** - [Install here](https://yarnpkg.com/)
+  ```bash
+  npm install -g yarn
+  yarn --version  # Should show v1.22+
+  ```
+  **Note:** This project uses Yarn exclusively for consistent dependency management.
 
 - ✅ **Docker Desktop** - [Download here](https://www.docker.com/products/docker-desktop)
   ```bash
@@ -84,20 +92,20 @@ Open a **new terminal window** and run:
 cd backend
 
 # Install dependencies (this may take 2-3 minutes)
-npm install
+yarn install
 
 # Create environment file (if it doesn't exist)
 cp .env.example .env
 # Edit .env if needed (default values work for local development)
 
 # Generate Prisma client
-npm run prisma:generate
+yarn prisma:generate
 
 # Run database migrations (creates tables)
-npm run prisma:migrate
+yarn prisma:migrate
 
 # Start the backend server
-npm run dev
+yarn dev
 ```
 
 **✅ Success indicators:**
@@ -116,16 +124,17 @@ Open **another new terminal window** and run:
 cd mobile
 
 # Install dependencies (this may take 3-5 minutes)
-npm install
+yarn install
 
 # Create .env file (if it doesn't exist)
-echo 'EXPO_PUBLIC_API_URL=http://localhost:3000' > .env
+cp .env.example .env
+# Or manually create with: echo 'API_URL=http://localhost:3000' > .env
 
 # For physical device testing, update .env with your computer's IP:
-# EXPO_PUBLIC_API_URL=http://192.168.1.XXX:3000
+# API_URL=http://192.168.1.XXX:3000
 
 # Start Expo development server
-npm start
+yarn start
 ```
 
 **✅ Success indicators:**
@@ -205,10 +214,10 @@ If you've already set up the project before:
 docker-compose up -d
 
 # Terminal 2: Start backend
-cd backend && npm run dev
+cd backend && yarn dev
 
 # Terminal 3: Start mobile app
-cd mobile && npm start
+cd mobile && yarn start
 # Then press 'i' for iOS or 'a' for Android
 ```
 
@@ -227,19 +236,19 @@ Follow these instructions to update the TravelJoy application with the latest ch
 cd backend
 
 # Check for outdated packages
-npm outdated
+yarn outdated
 
 # Update all dependencies to latest versions
-npm update
+yarn upgrade
 
 # Or update specific package
-npm install <package-name>@latest
+yarn upgrade <package-name>@latest
 
 # After updating, regenerate Prisma client
-npm run prisma:generate
+yarn prisma:generate
 
 # If database schema changed, run migrations
-npm run prisma:migrate
+yarn prisma:migrate
 ```
 
 #### Update Mobile Dependencies
@@ -249,16 +258,16 @@ npm run prisma:migrate
 cd mobile
 
 # Check for outdated packages
-npm outdated
+yarn outdated
 
 # Update all dependencies to latest versions
-npm update
+yarn upgrade
 
 # Or update specific package
-npm install <package-name>@latest
+yarn upgrade <package-name>@latest
 
 # Clear Metro bundler cache after updates
-npx expo start --clear
+yarn start --clear
 ```
 
 ### Updating from Git Repository
@@ -283,16 +292,16 @@ git pull origin <branch-name>
 cd backend
 
 # Install any new dependencies
-npm install
+yarn install
 
 # Regenerate Prisma client (if schema changed)
-npm run prisma:generate
+yarn prisma:generate
 
 # Run new migrations (if any)
-npm run prisma:migrate
+yarn prisma:migrate
 
 # Restart the server
-npm run dev
+yarn dev
 ```
 
 **2. Update Mobile:**
@@ -300,10 +309,10 @@ npm run dev
 cd mobile
 
 # Install any new dependencies
-npm install
+yarn install
 
 # Clear cache and restart
-npx expo start --clear
+yarn start --clear
 ```
 
 ### Updating Database Schema
@@ -314,13 +323,13 @@ If the database schema has been updated:
 cd backend
 
 # Generate Prisma client with new schema
-npm run prisma:generate
+yarn prisma:generate
 
 # Create and apply new migration
-npm run prisma:migrate
+yarn prisma:migrate
 
 # Or if you need to reset the database (⚠️ deletes all data)
-npm run prisma:migrate:reset
+yarn prisma:migrate:reset
 ```
 
 ### Updating Environment Variables
@@ -344,9 +353,11 @@ cp .env.example .env  # (⚠️ This overwrites your existing .env)
 ```bash
 cd mobile
 
-# Check if new environment variables are needed
-# Update .env file if needed
-echo 'EXPO_PUBLIC_API_URL=http://localhost:3000' > .env
+# Check .env.example for new variables
+cat .env.example
+
+# Update your .env file with new variables
+# Or copy the example: cp .env.example .env
 ```
 
 ### Updating Docker Services
@@ -381,15 +392,15 @@ docker-compose up -d
 
 # 3. Update backend
 cd backend
-npm install
-npm run prisma:generate
-npm run prisma:migrate
-# Restart: npm run dev
+yarn install
+yarn prisma:generate
+yarn prisma:migrate
+# Restart: yarn dev
 
 # 4. Update mobile
 cd ../mobile
-npm install
-npx expo start --clear
+yarn install
+yarn start --clear
 ```
 
 ### Troubleshooting Updates
@@ -397,34 +408,34 @@ npx expo start --clear
 **Issue: "Module not found" after update**
 ```bash
 # Clear node_modules and reinstall
-rm -rf node_modules package-lock.json
-npm install
+rm -rf node_modules yarn.lock
+yarn install
 ```
 
 **Issue: "Prisma client not generated"**
 ```bash
 cd backend
-npm run prisma:generate
+yarn prisma:generate
 ```
 
 **Issue: "Database migration failed"**
 ```bash
 cd backend
 # Check migration status
-npm run prisma:migrate status
+yarn prisma:migrate status
 
 # If needed, reset and reapply (⚠️ deletes data)
-npm run prisma:migrate:reset
+yarn prisma:migrate:reset
 ```
 
 **Issue: "Expo cache issues"**
 ```bash
 cd mobile
-npx expo start --clear
+yarn start --clear
 # Or completely reset
 rm -rf node_modules .expo
-npm install
-npx expo start --clear
+yarn install
+yarn start --clear
 ```
 
 ### Version Compatibility
@@ -447,16 +458,16 @@ Always check these compatibility requirements:
 3. Update dependencies one at a time
 4. Test thoroughly before merging
 
-**Example - Updating React Native:**
+**Example - Updating Expo SDK:**
 ```bash
 # Check current version
-npm list react-native
+yarn list expo
 
 # Read migration guide
-# https://react-native-community.github.io/upgrade-helper/
+# https://docs.expo.dev/workflow/upgrading-expo-sdk-walkthrough/
 
-# Update following the guide
-npx react-native upgrade
+# Update following the Expo upgrade guide
+yarn upgrade expo
 ```
 
 ---
@@ -477,9 +488,18 @@ npx react-native upgrade
 
 ## 🎉 Latest Updates
 
+**Infrastructure Improvements & Production Ready! (Dec 23, 2025)**
+
+Major infrastructure improvements for production readiness:
+- ✅ **Package Manager Standardization** - Yarn-only project for consistent dependencies
+- ✅ **Environment Templates** - Comprehensive .env.example files for easy setup
+- ✅ **Docker Optimization** - Fixed Redis healthcheck and improved configurations
+- ✅ **Enhanced Documentation** - Complete setup guides and troubleshooting
+- ✅ **Production Ready** - All systems tested and optimized for deployment
+
 **Frontend UI Implementation Complete! (Nov 24, 2025)**
 
-The mobile app now features a beautiful, modern UI with:
+The mobile app features a beautiful, modern UI with:
 - ✨ **Modern Design System** - Turquoise/Teal theme with consistent styling
 - 🏠 **Explore Screen** - Beautiful destination cards with search and filters
 - ✈️ **Enhanced Trip Creation** - Visual budget slider and modern preferences
@@ -487,7 +507,7 @@ The mobile app now features a beautiful, modern UI with:
 - 🔐 **Polished Authentication** - Beautiful login/register screens
 - 🧭 **Improved Navigation** - Modern tab bar with shadows and icons
 
-📖 See [FRONTEND_IMPLEMENTATION_SUMMARY.md](./FRONTEND_IMPLEMENTATION_SUMMARY.md) for details.
+📖 See [INFRASTRUCTURE_FIXES_APPLIED.md](./INFRASTRUCTURE_FIXES_APPLIED.md) for infrastructure details.
 
 ---
 
@@ -518,10 +538,10 @@ npm run dev
 # Clear node_modules and reinstall
 cd mobile
 rm -rf node_modules
-npm install
+yarn install
 
 # Clear Metro bundler cache
-npx expo start --clear
+yarn start --clear
 ```
 
 ---
@@ -530,7 +550,7 @@ npx expo start --clear
 
 **Solution:**
 1. Open Xcode once to accept licenses: `sudo xcodebuild -license accept`
-2. In terminal: `npx expo start` then press `i`
+2. In terminal: `yarn start` then press `i`
 3. If still not working: `open -a Simulator` manually
 
 ---
@@ -544,7 +564,7 @@ adb devices
 # Should show your emulator
 
 # Restart Expo with cleared cache
-npx expo start --clear
+yarn start --clear
 # Press 'a' again
 ```
 
@@ -554,11 +574,10 @@ npx expo start --clear
 
 **Solution:**
 ```bash
-# Expo CLI is now built into the project, use npx:
-npx expo start
+# Expo CLI is now built into the project, use yarn:
+yarn start
 
-# Or install globally:
-npm install -g expo-cli
+# The project uses Expo SDK 54 which doesn't require global CLI
 ```
 
 ---
@@ -573,11 +592,11 @@ docker-compose up -d
 
 # Terminal 2: Start backend
 cd backend
-npm run dev
+yarn dev
 
 # Terminal 3: Start mobile app
 cd mobile
-npm start
+yarn start
 # Then press 'i' for iOS or 'a' for Android
 ```
 
@@ -721,18 +740,18 @@ ipconfig | findstr IPv4
 cd backend
 
 # Development
-npm run dev              # Start dev server with hot reload
-npm run build            # Compile TypeScript to JavaScript
-npm start                # Start production server
+yarn dev                 # Start dev server with hot reload
+yarn build               # Compile TypeScript to JavaScript
+yarn start               # Start production server
 
 # Database
-npm run prisma:generate  # Generate Prisma client after schema changes
-npm run prisma:migrate   # Create and run new migration
-npm run prisma:studio    # Open Prisma Studio (database GUI)
+yarn prisma:generate     # Generate Prisma client after schema changes
+yarn prisma:migrate      # Create and run new migration
+yarn prisma:studio       # Open Prisma Studio (database GUI)
 
 # Testing
-npm test                 # Run tests
-npm run test:watch       # Run tests in watch mode
+yarn test                # Run tests
+yarn test:watch          # Run tests in watch mode
 ```
 
 ### Mobile Commands
@@ -741,15 +760,15 @@ npm run test:watch       # Run tests in watch mode
 cd mobile
 
 # Development
-npm start                # Start Expo dev server
-npm run ios              # Start and open iOS simulator
-npm run android          # Start and open Android emulator
-npm run web              # Run in web browser (experimental)
+yarn start               # Start Expo dev server
+yarn ios                 # Start and open iOS simulator
+yarn android             # Start and open Android emulator
+yarn web                 # Run in web browser (experimental)
 
 # Troubleshooting
-npx expo start --clear   # Clear Metro bundler cache
-npx expo doctor          # Check for common issues
-npx expo install         # Fix package versions
+yarn start --clear       # Clear Metro bundler cache
+yarn expo doctor         # Check for common issues
+yarn expo install        # Fix package versions
 ```
 
 ---
@@ -1011,12 +1030,14 @@ docker logs traveljoy-postgres
 
 ## 📚 Additional Documentation
 
+- 🏗️ [Infrastructure Fixes Applied](./INFRASTRUCTURE_FIXES_APPLIED.md) - Latest infrastructure improvements
 - 📖 [Frontend Implementation Summary](./FRONTEND_IMPLEMENTATION_SUMMARY.md) - Complete UI overview
 - 🎨 [UI Reference](./UI_REFERENCE.md) - Visual component guide  
-- 🏗️ [Project Structure](./PROJECT_STRUCTURE.md) - Code organization
+- 📁 [Project Structure](./PROJECT_STRUCTURE.md) - Code organization
 - 🔐 [Subscription Setup](./backend/SUBSCRIPTION_SETUP.md) - Payment integration
 - 🚀 [Deployment Guide](./DEPLOYMENT_SUMMARY.md) - Production deployment
 - ⚡ [Performance Optimizations](./mobile/PERFORMANCE_OPTIMIZATIONS.md) - Speed improvements
+- 🐳 [Docker Architecture](./DOCKER_ARCHITECTURE.md) - Container setup details
 
 ---
 
@@ -1044,7 +1065,7 @@ docker logs traveljoy-postgres
 
 3. **Run migrations:**
    ```bash
-   npm run prisma:migrate
+   yarn prisma:migrate
    ```
 
 ### Deploy Mobile App
@@ -1056,10 +1077,10 @@ cd mobile
 
 # Configure app.json with your bundle ID
 # Build for TestFlight/App Store
-npx eas build --platform ios --profile production
+yarn eas build --platform ios --profile production
 
 # Submit to App Store
-npx eas submit --platform ios --latest
+yarn eas submit --platform ios --latest
 ```
 
 #### Android Play Store
@@ -1069,10 +1090,10 @@ cd mobile
 
 # Configure app.json with your package name
 # Build for Play Store
-npx eas build --platform android --profile production
+yarn eas build --platform android --profile production
 
 # Submit to Play Store
-npx eas submit --platform android --latest
+yarn eas submit --platform android --latest
 ```
 
 See [DEPLOYMENT_SUMMARY.md](./DEPLOYMENT_SUMMARY.md) for detailed instructions.
@@ -1217,7 +1238,23 @@ ISC License - See [LICENSE](./LICENSE) file for details
 
 **Built with ❤️ using React Native, Node.js, and AI**
 
-*Last updated: November 24, 2025*
+*Last updated: December 23, 2025*
+
+---
+
+## 📦 Package Management
+
+This project uses **Yarn** exclusively for consistent dependency management across all environments.
+
+**Why Yarn?**
+- ✅ Faster and more reliable than npm
+- ✅ Deterministic dependency resolution
+- ✅ Better caching and offline support
+- ✅ Consistent lock file format
+
+**Important:** Never use `npm install` in this project. Always use `yarn install` or `yarn add <package>`.
+
+If you accidentally create a `package-lock.json` file, delete it immediately and run `yarn install`.
 
 ---
 

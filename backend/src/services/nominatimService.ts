@@ -1,5 +1,5 @@
 import axios from "axios";
-import redisClient from "../config/redis";
+import { cacheHelper } from "../utils/cacheHelper";
 
 interface Coordinates {
   lat: number;
@@ -42,7 +42,7 @@ class NominatimService {
     const cacheKey = `nominatim:search:${query}:${JSON.stringify(options)}`;
 
     // Check cache first
-    const cached = await this.getFromCache(cacheKey);
+    const cached = await cacheHelper.get<Place[]>(cacheKey);
     if (cached) {
       return cached;
     }
@@ -65,7 +65,7 @@ class NominatimService {
       const places = this.mapToPlaces(response.data);
 
       // Cache the results
-      await this.saveToCache(cacheKey, places);
+      await cacheHelper.set(cacheKey, places, this.cacheExpiry);
 
       return places;
     } catch (error) {
@@ -84,7 +84,7 @@ class NominatimService {
     const cacheKey = `nominatim:geocode:${address}`;
 
     // Check cache first
-    const cached = await this.getFromCache(cacheKey);
+    const cached = await cacheHelper.get<Coordinates>(cacheKey);
     if (cached) {
       return cached;
     }
@@ -110,7 +110,7 @@ class NominatimService {
       };
 
       // Cache the result
-      await this.saveToCache(cacheKey, coordinates);
+      await cacheHelper.set(cacheKey, coordinates, this.cacheExpiry);
 
       return coordinates;
     } catch (error) {
@@ -129,7 +129,7 @@ class NominatimService {
     const cacheKey = `nominatim:reverse:${lat}:${lon}`;
 
     // Check cache first
-    const cached = await this.getFromCache(cacheKey);
+    const cached = await cacheHelper.get<Place>(cacheKey);
     if (cached) {
       return cached;
     }
@@ -153,7 +153,7 @@ class NominatimService {
       const place = this.mapToPlace(response.data);
 
       // Cache the result
-      await this.saveToCache(cacheKey, place);
+      await cacheHelper.set(cacheKey, place, this.cacheExpiry);
 
       return place;
     } catch (error) {
@@ -172,7 +172,7 @@ class NominatimService {
     const cacheKey = `nominatim:details:${osmType}:${osmId}`;
 
     // Check cache first
-    const cached = await this.getFromCache(cacheKey);
+    const cached = await cacheHelper.get<Place>(cacheKey);
     if (cached) {
       return cached;
     }
@@ -195,7 +195,7 @@ class NominatimService {
       const place = this.mapToPlace(response.data[0]);
 
       // Cache the result
-      await this.saveToCache(cacheKey, place);
+      await cacheHelper.set(cacheKey, place, this.cacheExpiry);
 
       return place;
     } catch (error) {
@@ -252,7 +252,7 @@ class NominatimService {
     const cacheKey = `nominatim:type:${destination}:${type}:${subtype}:${limit}`;
 
     // Check cache first
-    const cached = await this.getFromCache(cacheKey);
+    const cached = await cacheHelper.get<Place[]>(cacheKey);
     if (cached) {
       return cached;
     }
@@ -286,7 +286,7 @@ class NominatimService {
       const places = this.mapToPlaces(response.data);
 
       // Cache the results
-      await this.saveToCache(cacheKey, places);
+      await cacheHelper.set(cacheKey, places, this.cacheExpiry);
 
       return places;
     } catch (error) {
@@ -373,27 +373,6 @@ class NominatimService {
     }
 
     return allPlaces.slice(0, limit);
-  }
-
-  /**
-   * Cache helper methods
-   */
-  private async getFromCache(key: string): Promise<any | null> {
-    try {
-      const cached = await redisClient.get(key);
-      return cached ? JSON.parse(cached) : null;
-    } catch (error) {
-      console.error("Cache get error:", error);
-      return null;
-    }
-  }
-
-  private async saveToCache(key: string, data: any): Promise<void> {
-    try {
-      await redisClient.set(key, JSON.stringify(data), "EX", this.cacheExpiry);
-    } catch (error) {
-      console.error("Cache save error:", error);
-    }
   }
 }
 

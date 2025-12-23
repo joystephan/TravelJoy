@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import weatherService from "../services/weatherService";
+import { validateCoordinates, sendErrorResponse } from "../utils/validation";
 
 export class WeatherController {
   /**
@@ -11,25 +12,19 @@ export class WeatherController {
       const { latitude, longitude } = req.query;
 
       if (!latitude || !longitude) {
-        return res.status(400).json({
-          error: "Missing required parameters: latitude and longitude",
-        });
+        return sendErrorResponse(
+          res,
+          400,
+          "VALIDATION_ERROR",
+          "Missing required parameters: latitude and longitude"
+        );
       }
 
       const lat = parseFloat(latitude as string);
       const lon = parseFloat(longitude as string);
 
-      if (isNaN(lat) || isNaN(lon)) {
-        return res.status(400).json({
-          error: "Invalid latitude or longitude values",
-        });
-      }
-
-      // Validate coordinate ranges
-      if (lat < -90 || lat > 90 || lon < -180 || lon > 180) {
-        return res.status(400).json({
-          error: "Latitude must be between -90 and 90, longitude between -180 and 180",
-        });
+      if (!validateCoordinates(res, lat, lon)) {
+        return;
       }
 
       const weather = await weatherService.getCurrentWeather({ lat, lon });
@@ -62,26 +57,29 @@ export class WeatherController {
       const { latitude, longitude, days = "5" } = req.query;
 
       if (!latitude || !longitude) {
-        return res.status(400).json({
-          error: "Missing required parameters: latitude and longitude",
-        });
+        return sendErrorResponse(
+          res,
+          400,
+          "VALIDATION_ERROR",
+          "Missing required parameters: latitude and longitude"
+        );
       }
 
       const lat = parseFloat(latitude as string);
       const lon = parseFloat(longitude as string);
       const numDays = parseInt(days as string, 10);
 
-      if (isNaN(lat) || isNaN(lon) || isNaN(numDays)) {
-        return res.status(400).json({
-          error: "Invalid parameter values",
-        });
+      if (!validateCoordinates(res, lat, lon)) {
+        return;
       }
 
-      // Validate coordinate ranges
-      if (lat < -90 || lat > 90 || lon < -180 || lon > 180) {
-        return res.status(400).json({
-          error: "Latitude must be between -90 and 90, longitude between -180 and 180",
-        });
+      if (isNaN(numDays)) {
+        return sendErrorResponse(
+          res,
+          400,
+          "VALIDATION_ERROR",
+          "Invalid days parameter"
+        );
       }
 
       // Limit days to reasonable range
@@ -121,18 +119,19 @@ export class WeatherController {
       const { latitude, longitude, location } = req.query;
 
       if (!latitude || !longitude) {
-        return res.status(400).json({
-          error: "Missing required parameters: latitude and longitude",
-        });
+        return sendErrorResponse(
+          res,
+          400,
+          "VALIDATION_ERROR",
+          "Missing required parameters: latitude and longitude"
+        );
       }
 
       const lat = parseFloat(latitude as string);
       const lon = parseFloat(longitude as string);
 
-      if (isNaN(lat) || isNaN(lon)) {
-        return res.status(400).json({
-          error: "Invalid latitude or longitude values",
-        });
+      if (!validateCoordinates(res, lat, lon)) {
+        return;
       }
 
       const weatherData = await weatherService.getWeatherData(
