@@ -27,9 +27,10 @@ export default function TripCreationScreen({
   navigation,
   route,
 }: TripCreationScreenProps) {
-  const { colors } = useTheme();
+  const { colors, mode } = useTheme();
   const [destination, setDestination] = useState(route?.params?.destination || "");
   const [budget, setBudget] = useState(1000);
+  const [budgetInput, setBudgetInput] = useState("1000"); // Separate state for input text
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [loading, setLoading] = useState(false);
@@ -77,11 +78,44 @@ export default function TripCreationScreen({
     }
   };
 
-  const validateForm = () => {
+  const validateDestination = async (): Promise<boolean> => {
     if (!destination.trim()) {
       Alert.alert("Validation Error", "Please enter a destination");
       return false;
     }
+
+    try {
+      // Call Nominatim API to validate destination
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(destination)}&format=json&limit=1`,
+        {
+          headers: {
+            'User-Agent': 'TravelJoy Mobile App',
+          },
+        }
+      );
+
+      const data = await response.json();
+
+      if (!data || data.length === 0) {
+        Alert.alert(
+          "Invalid Destination",
+          `"${destination}" is not a recognized location.\n\nPlease enter a valid city, country, or landmark.\n\nExamples:\n• Paris, France\n• Tokyo, Japan\n• New York, USA`
+        );
+        return false;
+      }
+
+      console.log('Destination validated:', data[0].display_name);
+      return true;
+    } catch (error) {
+      console.error('Destination validation error:', error);
+      // If validation fails due to network, allow it to proceed
+      // The backend will do its own validation
+      return true;
+    }
+  };
+
+  const validateForm = () => {
     if (budget < 100) {
       Alert.alert("Validation Error", "Budget must be at least $100");
       return false;
@@ -122,6 +156,11 @@ export default function TripCreationScreen({
   };
 
   const handleCreateTrip = async () => {
+    // Validate destination first
+    const isDestinationValid = await validateDestination();
+    if (!isDestinationValid) return;
+
+    // Then validate other fields
     if (!validateForm()) return;
 
     setLoading(true);
@@ -176,7 +215,7 @@ export default function TripCreationScreen({
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle={colors.mode === 'dark' ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
+      <StatusBar barStyle={mode === 'dark' ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
       <ScrollView 
         style={styles.container}
         showsVerticalScrollIndicator={false}
@@ -205,43 +244,81 @@ export default function TripCreationScreen({
             />
           </View>
 
-          {/* Budget Slider */}
+          {/* Budget Input */}
           <View style={styles.card}>
             <Text style={styles.cardLabel}>💰 Budget</Text>
             <View style={styles.budgetDisplay}>
-              <Text style={styles.budgetAmount}>${budget}</Text>
+              <Text style={styles.budgetAmount}>${budget.toLocaleString()}</Text>
               <Text style={styles.budgetLabel}>per trip</Text>
             </View>
             <View style={styles.budgetControls}>
               <TouchableOpacity
                 style={styles.budgetButton}
-                onPress={() => setBudget(Math.max(100, budget - 100))}
+                onPress={() => {
+                  const newBudget = Math.max(100, budget - 100);
+                  setBudget(newBudget);
+                  setBudgetInput(newBudget.toString());
+                }}
                 activeOpacity={0.7}
               >
                 <Text style={styles.budgetButtonText}>−</Text>
               </TouchableOpacity>
-              <View style={styles.budgetSlider}>
-                <View
-                  style={[
-                    styles.budgetSliderFill,
-                    { width: `${Math.min((budget / 5000) * 100, 100)}%` },
-                  ]}
-                />
-              </View>
+              <TextInput
+                style={styles.budgetInput}
+                value={budgetInput}
+                onChangeText={(text) => {
+                  // Remove all non-numeric characters
+                  const cleanText = text.replace(/[^0-9]/g, '');
+                  
+                  // Update the input text state (allows any input while typing)
+                  setBudgetInput(cleanText);
+                  
+                  // Update the budget number state
+                  if (cleanText === '') {
+                    setBudget(0);
+                  } else {
+                    const value = parseInt(cleanText, 10);
+                    if (!isNaN(value)) {
+                      setBudget(value);
+                    }
+                  }
+                }}
+                onBlur={() => {
+                  // When user leaves the field, enforce minimum and sync states
+                  if (budget < 100) {
+                    setBudget(100);
+                    setBudgetInput("100");
+                  } else {
+                    // Sync the input text with the budget value
+                    setBudgetInput(budget.toString());
+                  }
+                }}
+                onFocus={() => {
+                  // When user focuses, ensure input shows current budget
+                  setBudgetInput(budget.toString());
+                }}
+                keyboardType="number-pad"
+                placeholder="Enter budget"
+                placeholderTextColor={colors.textLight}
+              />
               <TouchableOpacity
                 style={styles.budgetButton}
-                onPress={() => setBudget(Math.min(5000, budget + 100))}
+                onPress={() => {
+                  const newBudget = budget + 100;
+                  setBudget(newBudget);
+                  setBudgetInput(newBudget.toString());
+                }}
                 activeOpacity={0.7}
               >
                 <Text style={styles.budgetButtonText}>+</Text>
               </TouchableOpacity>
             </View>
+            <Text style={styles.budgetHint}>Minimum: $100</Text>
           </View>
 
           {/* Date Pickers */}
           <View style={styles.card}>
             <Text style={styles.cardLabel}>📅 Travel Dates</Text>
-            <Text style={styles.cardHint}>Format: YYYY-MM-DD (e.g., 2026-12-25)</Text>
             <View style={styles.dateRow}>
               <View style={styles.dateInput}>
                 <Text style={styles.dateLabel}>Start Date</Text>
@@ -491,16 +568,23 @@ const createStyles = (colors: any) => StyleSheet.create({
     color: colors.white,
     fontWeight: '600',
   },
-  budgetSlider: {
+  budgetInput: {
     flex: 1,
-    height: 8,
-    backgroundColor: colors.gray200,
-    borderRadius: 4,
-    overflow: 'hidden',
+    ...typography.h3,
+    color: colors.textPrimary,
+    backgroundColor: colors.gray50,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.gray200,
+    textAlign: 'center',
+    fontWeight: '600',
   },
-  budgetSliderFill: {
-    height: '100%',
-    backgroundColor: colors.primary,
+  budgetHint: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    marginTop: spacing.sm,
+    textAlign: 'center',
   },
   dateRow: {
     flexDirection: 'row',

@@ -95,6 +95,11 @@ class TripController {
                     },
                 });
             }
+            // Log meal data for debugging
+            console.log('Backend: getTripById - Meal data:', trip.dailyPlans?.map(plan => ({
+                date: plan.date,
+                meals: plan.meals?.map(m => ({ id: m.id, name: m.name, cost: m.cost }))
+            })));
             res.json({ trip });
         }
         catch (error) {
@@ -197,6 +202,57 @@ class TripController {
                 error: {
                     code: "REPLACE_ERROR",
                     message: "Failed to replace activity",
+                },
+            });
+        }
+    }
+    /**
+     * Update a meal
+     */
+    async updateMeal(req, res) {
+        try {
+            const { mealId } = req.params;
+            const updates = req.body;
+            console.log('Backend: Updating meal:', mealId, 'with updates:', updates);
+            const meal = await tripService_1.tripService.updateMeal(mealId, updates);
+            console.log('Backend: Meal updated successfully:', {
+                id: meal.id,
+                name: meal.name,
+                cost: meal.cost,
+                mealType: meal.mealType,
+            });
+            res.json({
+                message: "Meal updated successfully",
+                meal,
+            });
+        }
+        catch (error) {
+            console.error("Update meal error:", error);
+            res.status(500).json({
+                error: {
+                    code: "UPDATE_ERROR",
+                    message: "Failed to update meal",
+                },
+            });
+        }
+    }
+    /**
+     * Delete a meal
+     */
+    async deleteMeal(req, res) {
+        try {
+            const { mealId } = req.params;
+            await tripService_1.tripService.deleteMeal(mealId);
+            res.json({
+                message: "Meal deleted successfully",
+            });
+        }
+        catch (error) {
+            console.error("Delete meal error:", error);
+            res.status(500).json({
+                error: {
+                    code: "DELETE_ERROR",
+                    message: "Failed to delete meal",
                 },
             });
         }

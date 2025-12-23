@@ -52,10 +52,20 @@ class HotelController {
                 "New York, USA",
                 "Barcelona, Spain",
                 "Dubai, UAE",
+                "Beirut, Lebanon",
+                "Rome, Italy",
+                "Amsterdam, Netherlands",
+                "Berlin, Germany",
+                "Singapore",
+                "Bangkok, Thailand",
+                "Sydney, Australia",
+                "Istanbul, Turkey",
+                "Cairo, Egypt",
+                "Marrakech, Morocco",
             ];
-            // Fetch hotels for each destination (limit 3 per destination)
+            // Fetch hotels for each destination (limit 5 per destination for more variety)
             const hotelPromises = popularDestinations.map((location) => externalApiService_1.default
-                .searchHotels(location, { limit: 3 })
+                .searchHotels(location, { limit: 5 })
                 .then((hotels) => hotels.map((hotel) => ({ ...hotel, destination: location })))
                 .catch(() => []) // Continue even if one fails
             );

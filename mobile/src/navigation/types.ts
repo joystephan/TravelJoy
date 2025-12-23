@@ -3,6 +3,7 @@ export type RootStackParamList = {
   CreateTrip: undefined;
   TripDetail: { tripId: string };
   EditActivity: { activityId: string; tripId: string };
+  EditMeal: { meal: any; onSave: () => void };
   TravelPreferences: undefined;
 };
 
@@ -16,4 +17,6 @@ export type AuthStackParamList = {
   Login: undefined;
   Register: undefined;
   ForgotPassword: undefined;
+  TermsOfService: undefined;
+  PrivacyPolicy: undefined;
 };

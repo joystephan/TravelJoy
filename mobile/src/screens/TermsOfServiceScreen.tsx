@@ -1,178 +1,173 @@
-import React from "react";
+import React from 'react';
 import {
   View,
   Text,
+  ScrollView,
   StyleSheet,
   SafeAreaView,
-  ScrollView,
+  TouchableOpacity,
   StatusBar,
-} from "react-native";
-import { spacing, typography } from "../theme";
-import { useTheme } from "../contexts/ThemeContext";
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { colors, spacing, typography, borderRadius } from '../theme';
 
 interface TermsOfServiceScreenProps {
   navigation: any;
 }
 
-export default function TermsOfServiceScreen({
-  navigation,
-}: TermsOfServiceScreenProps) {
-  const { colors } = useTheme();
-  const styles = createStyles(colors);
-
+export default function TermsOfServiceScreen({ navigation }: TermsOfServiceScreenProps) {
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle={colors.mode === 'dark' ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
+      <StatusBar barStyle="dark-content" backgroundColor={colors.white} />
+      
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.backButton}
+        >
+          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Terms of Service</Text>
+        <View style={styles.placeholder} />
+      </View>
+
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Terms of Service</Text>
-          <Text style={styles.lastUpdated}>Last updated: January 2024</Text>
-        </View>
-
         <View style={styles.content}>
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>1. Acceptance of Terms</Text>
-            <Text style={styles.sectionText}>
-              By accessing and using TravelJoy, you accept and agree to be bound
-              by the terms and provision of this agreement. If you do not agree
-              to abide by the above, please do not use this service.
-            </Text>
-          </View>
+          <Text style={styles.lastUpdated}>Last Updated: December 23, 2025</Text>
 
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>2. Use License</Text>
-            <Text style={styles.sectionText}>
-              Permission is granted to temporarily use TravelJoy for personal,
-              non-commercial transitory viewing only. This is the grant of a
-              license, not a transfer of title, and under this license you may
-              not:
-            </Text>
-            <Text style={styles.bulletPoint}>
-              • Modify or copy the materials
-            </Text>
-            <Text style={styles.bulletPoint}>
-              • Use the materials for any commercial purpose
-            </Text>
-            <Text style={styles.bulletPoint}>
-              • Attempt to decompile or reverse engineer any software
-            </Text>
-            <Text style={styles.bulletPoint}>
-              • Remove any copyright or other proprietary notations
-            </Text>
-          </View>
+          <Text style={styles.sectionTitle}>1. Acceptance of Terms</Text>
+          <Text style={styles.paragraph}>
+            By accessing and using TravelJoy ("the App"), you accept and agree to be bound by the terms and provision of this agreement. If you do not agree to these Terms of Service, please do not use the App.
+          </Text>
 
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>3. User Accounts</Text>
-            <Text style={styles.sectionText}>
-              You are responsible for maintaining the confidentiality of your
-              account and password. You agree to accept responsibility for all
-              activities that occur under your account or password.
-            </Text>
-          </View>
+          <Text style={styles.sectionTitle}>2. Description of Service</Text>
+          <Text style={styles.paragraph}>
+            TravelJoy provides users with access to travel planning tools, destination information, hotel and flight search capabilities, and AI-powered trip planning features. The service is provided "as is" and we reserve the right to modify or discontinue the service at any time.
+          </Text>
 
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>4. Service Availability</Text>
-            <Text style={styles.sectionText}>
-              We strive to provide continuous access to our service, but we do
-              not guarantee that the service will be available at all times. We
-              reserve the right to modify, suspend, or discontinue the service
-              at any time without notice.
-            </Text>
-          </View>
+          <Text style={styles.sectionTitle}>3. User Accounts</Text>
+          <Text style={styles.paragraph}>
+            You are responsible for maintaining the confidentiality of your account credentials and for all activities that occur under your account. You agree to notify us immediately of any unauthorized use of your account.
+          </Text>
 
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>5. AI-Generated Content</Text>
-            <Text style={styles.sectionText}>
-              TravelJoy uses artificial intelligence to generate travel
-              itineraries and recommendations. While we strive for accuracy, we
-              cannot guarantee that all suggestions will be perfect or suitable
-              for your needs. Always verify important information independently.
-            </Text>
-          </View>
+          <Text style={styles.sectionTitle}>4. User Conduct</Text>
+          <Text style={styles.paragraph}>
+            You agree not to use the App for any unlawful purpose or in any way that could damage, disable, overburden, or impair the service. You shall not attempt to gain unauthorized access to any portion of the App or any other systems or networks connected to the App.
+          </Text>
 
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>6. Limitation of Liability</Text>
-            <Text style={styles.sectionText}>
-              In no event shall TravelJoy or its suppliers be liable for any
-              damages (including, without limitation, damages for loss of data
-              or profit, or due to business interruption) arising out of the use
-              or inability to use the materials on TravelJoy's service.
-            </Text>
-          </View>
+          <Text style={styles.sectionTitle}>5. Intellectual Property</Text>
+          <Text style={styles.paragraph}>
+            All content included in the App, such as text, graphics, logos, images, and software, is the property of TravelJoy or its content suppliers and is protected by international copyright laws. You may not reproduce, distribute, or create derivative works from any content without express written permission.
+          </Text>
 
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>7. Revisions</Text>
-            <Text style={styles.sectionText}>
-              TravelJoy may revise these terms of service at any time without
-              notice. By using this service you are agreeing to be bound by the
-              then current version of these terms of service.
-            </Text>
-          </View>
+          <Text style={styles.sectionTitle}>6. Third-Party Services</Text>
+          <Text style={styles.paragraph}>
+            The App may contain links to third-party websites or services that are not owned or controlled by TravelJoy. We have no control over, and assume no responsibility for, the content, privacy policies, or practices of any third-party websites or services.
+          </Text>
 
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>8. Contact Information</Text>
-            <Text style={styles.sectionText}>
-              If you have any questions about these Terms of Service, please
-              contact us at support@traveljoy.com
-            </Text>
-          </View>
+          <Text style={styles.sectionTitle}>7. Limitation of Liability</Text>
+          <Text style={styles.paragraph}>
+            TravelJoy shall not be liable for any indirect, incidental, special, consequential, or punitive damages resulting from your use or inability to use the service. This includes but is not limited to damages for loss of profits, data, or other intangible losses.
+          </Text>
+
+          <Text style={styles.sectionTitle}>8. Disclaimer of Warranties</Text>
+          <Text style={styles.paragraph}>
+            The service is provided on an "as is" and "as available" basis. TravelJoy makes no warranties, expressed or implied, regarding the operation of the service or the information, content, or materials included in the App.
+          </Text>
+
+          <Text style={styles.sectionTitle}>9. Booking and Payments</Text>
+          <Text style={styles.paragraph}>
+            Any bookings made through the App are subject to availability and confirmation. Prices displayed are subject to change without notice. You are responsible for reviewing and agreeing to the terms and conditions of any third-party service providers.
+          </Text>
+
+          <Text style={styles.sectionTitle}>10. Modifications to Terms</Text>
+          <Text style={styles.paragraph}>
+            We reserve the right to modify these Terms of Service at any time. We will notify users of any material changes by posting the new terms on the App. Your continued use of the service after such modifications constitutes your acceptance of the updated terms.
+          </Text>
+
+          <Text style={styles.sectionTitle}>11. Termination</Text>
+          <Text style={styles.paragraph}>
+            We may terminate or suspend your account and access to the service immediately, without prior notice or liability, for any reason, including if you breach these Terms of Service.
+          </Text>
+
+          <Text style={styles.sectionTitle}>12. Governing Law</Text>
+          <Text style={styles.paragraph}>
+            These Terms shall be governed by and construed in accordance with the laws of the jurisdiction in which TravelJoy operates, without regard to its conflict of law provisions.
+          </Text>
+
+          <Text style={styles.sectionTitle}>13. Contact Information</Text>
+          <Text style={styles.paragraph}>
+            If you have any questions about these Terms of Service, please contact us at:
+          </Text>
+          <Text style={styles.contactInfo}>
+            Email: support@traveljoy.com{'\n'}
+            Address: 123 Travel Street, Adventure City, AC 12345
+          </Text>
+
+          <View style={styles.bottomSpacing} />
         </View>
-
-        <View style={styles.bottomSpacing} />
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-const createStyles = (colors: any) => StyleSheet.create({
+const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.white,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.gray200,
+  },
+  backButton: {
+    padding: spacing.xs,
+  },
+  headerTitle: {
+    ...typography.h3,
+    color: colors.textPrimary,
+  },
+  placeholder: {
+    width: 40,
   },
   container: {
     flex: 1,
   },
-  header: {
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.md,
-  },
-  title: {
-    ...typography.h1,
-    color: colors.textPrimary,
-    marginBottom: spacing.xs,
+  content: {
+    padding: spacing.lg,
   },
   lastUpdated: {
     ...typography.body2,
     color: colors.textSecondary,
-  },
-  content: {
-    paddingHorizontal: spacing.md,
-  },
-  section: {
+    fontStyle: 'italic',
     marginBottom: spacing.xl,
   },
   sectionTitle: {
-    ...typography.h3,
+    ...typography.h4,
     color: colors.textPrimary,
+    marginTop: spacing.lg,
     marginBottom: spacing.sm,
-    fontWeight: "600",
   },
-  sectionText: {
+  paragraph: {
     ...typography.body1,
     color: colors.textSecondary,
     lineHeight: 24,
-    marginBottom: spacing.sm,
+    marginBottom: spacing.md,
   },
-  bulletPoint: {
+  contactInfo: {
     ...typography.body1,
-    color: colors.textSecondary,
+    color: colors.primary,
     lineHeight: 24,
-    marginLeft: spacing.md,
-    marginBottom: spacing.xs,
+    marginBottom: spacing.md,
+    fontWeight: '500',
   },
   bottomSpacing: {
     height: spacing.xl,
   },
 });
-

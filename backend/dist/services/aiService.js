@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.aiService = void 0;
 const axios_1 = __importDefault(require("axios"));
 const redis_1 = __importDefault(require("../config/redis"));
+const nominatimService_1 = __importDefault(require("./nominatimService"));
 class AIService {
     constructor() {
         this.provider = process.env.AI_PROVIDER || "ollama";
@@ -110,7 +111,7 @@ class AIService {
         const { destination, budget, startDate, endDate, preferences, weatherData, placesData, } = params;
         const days = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
         const dailyBudget = budget / days;
-        let prompt = `Generate a detailed ${days}-day travel itinerary for ${destination}.
+        let prompt = `You are a local travel expert for ${destination}. Generate a detailed ${days}-day travel itinerary using REAL, SPECIFIC places in ${destination}.
 
 TRIP DETAILS:
 - Destination: ${destination}
@@ -129,20 +130,34 @@ PREFERENCES:
             prompt += `\nWEATHER FORECAST:\n${JSON.stringify(weatherData, null, 2)}\n`;
         }
         if (placesData && placesData.length > 0) {
-            prompt += `\nAVAILABLE ATTRACTIONS:\n${placesData
+            prompt += `\nAVAILABLE ATTRACTIONS IN ${destination}:\n${placesData
                 .map((p) => `- ${p.display_name || p.name}`)
                 .join("\n")}\n`;
         }
         prompt += `
-REQUIREMENTS:
-1. Create a day-by-day itinerary with specific activities, meals, and transportation
-2. Include estimated costs for each item
-3. Consider opening hours and optimal visiting times
-4. Balance the daily budget across all days
-5. Include breakfast, lunch, and dinner for each day
-6. Add transportation between activities
-7. Consider weather conditions if provided
-8. Match the schedule preference (relaxed = 2-3 activities/day, moderate = 3-4, packed = 5+)
+CRITICAL REQUIREMENTS:
+1. **USE ONLY REAL PLACES**: All activities, restaurants, and attractions MUST be real, existing places in ${destination}. DO NOT use generic names like "Historic Museum" or "Local Café".
+2. **SPECIFIC NAMES REQUIRED**: 
+   - Activities: Use actual attraction names (e.g., "Eiffel Tower" not "Famous Tower", "Louvre Museum" not "Art Museum")
+   - Restaurants: Use real restaurant names (e.g., "Le Jules Verne" not "Fine Dining Restaurant", "Café de Flore" not "Traditional Café")
+   - Addresses: Provide real street addresses in ${destination}
+3. **UNIQUE PLACES**: Each day MUST have DIFFERENT activities, meals, and transportation. Do NOT repeat the same places across days.
+4. **ACCURATE COORDINATES**: Provide real GPS coordinates (latitude, longitude) for each location in ${destination}
+5. **BUDGET ENFORCEMENT**: The TOTAL COST across ALL ${days} days MUST NOT EXCEED $${budget}. Each day should cost approximately $${dailyBudget.toFixed(2)} or less.
+6. **COMPLETE MEALS**: Include breakfast, lunch, and dinner for each day - use DIFFERENT real restaurants for each meal
+7. **REALISTIC TRANSPORTATION**: Add transportation between activities using real modes available in ${destination}
+8. **SCHEDULE MATCHING**: ${preferences.schedulePreference === "relaxed" ? "2-3 activities per day" : preferences.schedulePreference === "packed" ? "5+ activities per day" : "3-4 activities per day"}
+9. **VERIFY BUDGET**: After creating the itinerary, sum all daily costs to ensure total ≤ $${budget}
+
+EXAMPLES OF WHAT TO DO:
+✅ GOOD: "Visit the Eiffel Tower at Champ de Mars, 5 Avenue Anatole France"
+✅ GOOD: "Lunch at Le Comptoir du Relais, 9 Carrefour de l'Odéon"
+✅ GOOD: "Explore the Louvre Museum, Rue de Rivoli"
+
+EXAMPLES OF WHAT NOT TO DO:
+❌ BAD: "Visit a historic museum"
+❌ BAD: "Lunch at a traditional restaurant"
+❌ BAD: "Explore the city center"
 
 FORMAT YOUR RESPONSE AS JSON:
 {
@@ -193,7 +208,7 @@ Generate the complete itinerary now:`;
     /**
      * Parse and validate AI response for itinerary generation
      */
-    parseItineraryResponse(response, params) {
+    async parseItineraryResponse(response, params) {
         try {
             // Extract JSON from response (handle cases where AI adds extra text)
             const jsonMatch = response.match(/\{[\s\S]*\}/);
@@ -212,89 +227,283 @@ Generate the complete itinerary now:`;
                 transportation: day.transportation || [],
                 estimatedCost: day.estimatedCost || 0,
             }));
-            return dailyPlans;
+            // Enforce budget constraint
+            const enforcedPlans = this.enforceBudgetConstraint(dailyPlans, params.budget);
+            return enforcedPlans;
         }
         catch (error) {
             console.error("Failed to parse AI response:", error);
             // Return fallback itinerary
-            return this.generateFallbackItinerary(params);
+            return await this.generateFallbackItinerary(params);
         }
     }
     /**
-     * Generate fallback itinerary if AI fails
+     * Enforce budget constraint by scaling down costs if total exceeds budget
      */
-    generateFallbackItinerary(params) {
-        const { startDate, endDate, budget } = params;
+    enforceBudgetConstraint(dailyPlans, totalBudget) {
+        // Calculate total cost
+        const totalCost = dailyPlans.reduce((sum, plan) => sum + plan.estimatedCost, 0);
+        // If within budget, return as is
+        if (totalCost <= totalBudget) {
+            console.log(`Budget OK: Total cost $${totalCost.toFixed(2)} ≤ Budget $${totalBudget.toFixed(2)}`);
+            return dailyPlans;
+        }
+        // Calculate scaling factor to bring total within budget
+        const scaleFactor = totalBudget / totalCost;
+        console.log(`Budget exceeded: Total cost $${totalCost.toFixed(2)} > Budget $${totalBudget.toFixed(2)}`);
+        console.log(`Scaling all costs by factor: ${scaleFactor.toFixed(3)}`);
+        // Scale down all costs proportionally
+        const adjustedPlans = dailyPlans.map(plan => {
+            // Scale activities
+            const scaledActivities = plan.activities.map(activity => ({
+                ...activity,
+                cost: Math.round(activity.cost * scaleFactor * 100) / 100, // Round to 2 decimals
+            }));
+            // Scale meals
+            const scaledMeals = plan.meals.map(meal => ({
+                ...meal,
+                cost: Math.round(meal.cost * scaleFactor * 100) / 100,
+            }));
+            // Scale transportation
+            const scaledTransportation = plan.transportation.map(transport => ({
+                ...transport,
+                cost: Math.round(transport.cost * scaleFactor * 100) / 100,
+            }));
+            // Recalculate estimated cost
+            const newEstimatedCost = scaledActivities.reduce((sum, a) => sum + a.cost, 0) +
+                scaledMeals.reduce((sum, m) => sum + m.cost, 0) +
+                scaledTransportation.reduce((sum, t) => sum + t.cost, 0);
+            return {
+                ...plan,
+                activities: scaledActivities,
+                meals: scaledMeals,
+                transportation: scaledTransportation,
+                estimatedCost: Math.round(newEstimatedCost * 100) / 100,
+            };
+        });
+        const newTotalCost = adjustedPlans.reduce((sum, plan) => sum + plan.estimatedCost, 0);
+        console.log(`Budget enforced: New total cost $${newTotalCost.toFixed(2)} ≤ Budget $${totalBudget.toFixed(2)}`);
+        return adjustedPlans;
+    }
+    /**
+     * Generate fallback itinerary if AI fails - using REAL places from LocationIQ
+     */
+    async generateFallbackItinerary(params) {
+        const { startDate, endDate, budget, destination, placesData } = params;
         const days = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
         const dailyBudget = budget / days;
+        console.log(`🔄 Generating fallback itinerary with REAL places for ${destination}...`);
+        // Fetch REAL attractions and restaurants from LocationIQ
+        let realAttractions = [];
+        let realRestaurants = [];
+        try {
+            console.log(`🔍 Fetching real attractions in ${destination}...`);
+            realAttractions = await nominatimService_1.default.searchAttractions(destination, 30);
+            console.log(`✅ Found ${realAttractions.length} real attractions`);
+            console.log(`🔍 Fetching real restaurants in ${destination}...`);
+            realRestaurants = await nominatimService_1.default.searchRestaurants(destination, 30);
+            console.log(`✅ Found ${realRestaurants.length} real restaurants`);
+        }
+        catch (error) {
+            console.error("⚠️ Failed to fetch real places, will use generic fallback:", error);
+        }
+        // Get destination coordinates from placesData or use default
+        let baseLat = 0;
+        let baseLon = 0;
+        if (placesData && placesData.length > 0 && placesData[0].coordinates) {
+            baseLat = placesData[0].coordinates.lat;
+            baseLon = placesData[0].coordinates.lon;
+        }
+        else if (realAttractions.length > 0) {
+            baseLat = realAttractions[0].coordinates.lat;
+            baseLon = realAttractions[0].coordinates.lon;
+        }
+        // Helper function to get a real place or generate a generic one
+        const getActivity = (index) => {
+            if (realAttractions.length > index) {
+                const place = realAttractions[index];
+                return {
+                    name: place.name || place.displayName.split(',')[0],
+                    description: `Visit ${place.name || place.displayName.split(',')[0]}`,
+                    location: {
+                        lat: place.coordinates.lat,
+                        lon: place.coordinates.lon,
+                        address: place.displayName,
+                    },
+                    category: place.type || "attraction",
+                };
+            }
+            // Fallback to generic if not enough real places
+            const genericActivities = [
+                { name: `${destination} National Museum`, description: "Explore local history and culture", category: "museum" },
+                { name: `${destination} City Center`, description: "Stroll through the main streets", category: "sightseeing" },
+                { name: `${destination} Art Gallery`, description: "Discover local art", category: "art" },
+                { name: `${destination} Central Park`, description: "Relax in nature", category: "nature" },
+                { name: `${destination} Main Market`, description: "Experience local shopping", category: "shopping" },
+            ];
+            const generic = genericActivities[index % genericActivities.length];
+            return {
+                ...generic,
+                location: { lat: baseLat, lon: baseLon, address: `${destination} City Center` },
+            };
+        };
+        const getRestaurant = (index, mealType) => {
+            if (realRestaurants.length > index) {
+                const place = realRestaurants[index];
+                return {
+                    name: place.name || place.displayName.split(',')[0],
+                    location: {
+                        lat: place.coordinates.lat,
+                        lon: place.coordinates.lon,
+                        address: place.displayName,
+                    },
+                    cuisine: place.type || "local",
+                };
+            }
+            // Fallback to generic if not enough real places
+            const genericNames = {
+                breakfast: [`Café ${destination}`, `${destination} Bakery`, `Morning Spot`],
+                lunch: [`${destination} Bistro`, `Local Restaurant`, `${destination} Eatery`],
+                dinner: [`Fine Dining ${destination}`, `${destination} Traditional`, `Rooftop Restaurant`],
+            };
+            const names = genericNames[mealType] || genericNames.lunch;
+            return {
+                name: names[index % names.length],
+                location: { lat: baseLat, lon: baseLon, address: `${destination} City Center` },
+                cuisine: "local",
+            };
+        };
+        // Different transportation modes
+        const transportModes = ["walk", "taxi", "bus", "train", "walk", "taxi", "bus", "walk"];
         const plans = [];
         for (let i = 0; i < days; i++) {
             const date = new Date(startDate);
             date.setDate(date.getDate() + i);
+            // Get REAL activities for this day (2 activities per day)
+            const activity1 = getActivity(i * 2);
+            const activity2 = getActivity(i * 2 + 1);
+            const activities = [
+                {
+                    name: activity1.name,
+                    description: activity1.description,
+                    location: activity1.location,
+                    duration: 120,
+                    cost: 25, // Realistic museum/attraction entry fee
+                    category: activity1.category,
+                    startTime: "09:00",
+                    endTime: "11:00",
+                },
+                {
+                    name: activity2.name,
+                    description: activity2.description,
+                    location: activity2.location,
+                    duration: 180,
+                    cost: 35, // Realistic tour/activity cost
+                    category: activity2.category,
+                    startTime: "14:00",
+                    endTime: "17:00",
+                },
+            ];
+            // Get REAL restaurants for this day (3 meals per day)
+            const breakfast = getRestaurant(i * 3, "breakfast");
+            const lunch = getRestaurant(i * 3 + 1, "lunch");
+            const dinner = getRestaurant(i * 3 + 2, "dinner");
+            const meals = [
+                {
+                    name: breakfast.name,
+                    type: "breakfast",
+                    location: breakfast.location,
+                    cost: 10, // Realistic breakfast cost
+                    cuisine: breakfast.cuisine,
+                    time: "08:00",
+                },
+                {
+                    name: lunch.name,
+                    type: "lunch",
+                    location: lunch.location,
+                    cost: 15, // Realistic lunch cost
+                    cuisine: lunch.cuisine,
+                    time: "12:30",
+                },
+                {
+                    name: dinner.name,
+                    type: "dinner",
+                    location: dinner.location,
+                    cost: 25, // Realistic dinner cost
+                    cuisine: dinner.cuisine,
+                    time: "19:00",
+                },
+            ];
+            // Generate transportation for each day
+            const transportMode = transportModes[i % transportModes.length];
+            // Use activity coordinates for transportation
+            const fromLat = i === 0 ? baseLat : activities[0].location.lat;
+            const fromLon = i === 0 ? baseLon : activities[0].location.lon;
+            const fromAddress = i === 0 ? `${destination} Hotel Area` : activities[0].location.address;
+            const toLat = activities[0].location.lat;
+            const toLon = activities[0].location.lon;
+            const toAddress = activities[0].location.address;
+            // Generate transportation with realistic fixed costs
+            const transportCost = transportMode === "walk" ? 0 :
+                transportMode === "taxi" ? 15 :
+                    transportMode === "bus" ? 3 :
+                        5; // train/other
+            const transportation = [
+                {
+                    type: transportMode,
+                    from: i === 0 ? "Hotel" : "Previous Location",
+                    to: activities[0].name,
+                    fromLocation: {
+                        lat: fromLat,
+                        lon: fromLon,
+                        address: fromAddress,
+                    },
+                    toLocation: {
+                        lat: toLat,
+                        lon: toLon,
+                        address: toAddress,
+                    },
+                    duration: transportMode === "walk" ? 15 : transportMode === "taxi" ? 10 : transportMode === "bus" ? 20 : 25,
+                    cost: transportCost,
+                    time: "08:45",
+                },
+            ];
+            // Calculate actual estimated cost from activities, meals, and transportation
+            const actualCost = activities.reduce((sum, a) => sum + a.cost, 0) +
+                meals.reduce((sum, m) => sum + m.cost, 0) +
+                transportation.reduce((sum, t) => sum + t.cost, 0);
+            console.log(`Day ${i + 1} fallback costs:`, {
+                activities: activities.reduce((sum, a) => sum + a.cost, 0),
+                meals: meals.reduce((sum, m) => sum + m.cost, 0),
+                transportation: transportation.reduce((sum, t) => sum + t.cost, 0),
+                total: actualCost,
+                dailyBudget,
+            });
             plans.push({
                 date,
-                activities: [
-                    {
-                        name: "Morning Exploration",
-                        description: "Explore local attractions",
-                        location: { lat: 0, lon: 0, address: "City Center" },
-                        duration: 120,
-                        cost: dailyBudget * 0.3,
-                        category: "sightseeing",
-                        startTime: "09:00",
-                        endTime: "11:00",
-                    },
-                    {
-                        name: "Afternoon Activity",
-                        description: "Visit popular destination",
-                        location: { lat: 0, lon: 0, address: "Main Attraction" },
-                        duration: 180,
-                        cost: dailyBudget * 0.4,
-                        category: "attraction",
-                        startTime: "14:00",
-                        endTime: "17:00",
-                    },
-                ],
-                meals: [
-                    {
-                        name: "Local Breakfast",
-                        type: "breakfast",
-                        location: { lat: 0, lon: 0, address: "Near Hotel" },
-                        cost: dailyBudget * 0.1,
-                        cuisine: "local",
-                        time: "08:00",
-                    },
-                    {
-                        name: "Lunch",
-                        type: "lunch",
-                        location: { lat: 0, lon: 0, address: "City Center" },
-                        cost: dailyBudget * 0.15,
-                        cuisine: "local",
-                        time: "12:00",
-                    },
-                    {
-                        name: "Dinner",
-                        type: "dinner",
-                        location: { lat: 0, lon: 0, address: "Restaurant District" },
-                        cost: dailyBudget * 0.2,
-                        cuisine: "local",
-                        time: "19:00",
-                    },
-                ],
-                transportation: [
-                    {
-                        type: "walk",
-                        from: "Hotel",
-                        to: "Morning Exploration",
-                        duration: 15,
-                        cost: 0,
-                        time: "08:45",
-                    },
-                ],
-                estimatedCost: dailyBudget,
+                activities,
+                meals,
+                transportation,
+                estimatedCost: actualCost,
             });
         }
-        return plans;
+        const totalBeforeEnforcement = plans.reduce((sum, p) => sum + p.estimatedCost, 0);
+        console.log(`Fallback itinerary BEFORE enforcement:`, {
+            totalCost: totalBeforeEnforcement,
+            budget,
+            overBudget: totalBeforeEnforcement > budget,
+            dailyBreakdown: plans.map((p, i) => ({ day: i + 1, cost: p.estimatedCost })),
+        });
+        // Apply budget enforcement to fallback itinerary too
+        const enforcedPlans = this.enforceBudgetConstraint(plans, budget);
+        const totalAfterEnforcement = enforcedPlans.reduce((sum, p) => sum + p.estimatedCost, 0);
+        console.log(`Fallback itinerary AFTER enforcement:`, {
+            totalCost: totalAfterEnforcement,
+            budget,
+            withinBudget: totalAfterEnforcement <= budget,
+            dailyBreakdown: enforcedPlans.map((p, i) => ({ day: i + 1, cost: p.estimatedCost })),
+        });
+        return enforcedPlans;
     }
     /**
      * Generate travel itinerary using AI
@@ -304,11 +513,11 @@ Generate the complete itinerary now:`;
         const prompt = this.createItineraryPrompt(params);
         try {
             const response = await this.generateCompletion(prompt, systemPrompt);
-            return this.parseItineraryResponse(response, params);
+            return await this.parseItineraryResponse(response, params);
         }
         catch (error) {
             console.error("AI itinerary generation failed:", error);
-            return this.generateFallbackItinerary(params);
+            return await this.generateFallbackItinerary(params);
         }
     }
     /**

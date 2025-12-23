@@ -11,7 +11,7 @@ interface WeatherData {
 class WeatherService {
   async getWeather(latitude: number, longitude: number): Promise<WeatherData> {
     try {
-      const response = await api.get("/weather", {
+      const response = await api.get("/api/weather", {
         params: { latitude, longitude },
       });
       return response.data;
@@ -36,7 +36,7 @@ class WeatherService {
     days: number = 5
   ): Promise<WeatherData[]> {
     try {
-      const response = await api.get("/weather/forecast", {
+      const response = await api.get("/api/weather/forecast", {
         params: { latitude, longitude, days },
       });
       return response.data;

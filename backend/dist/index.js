@@ -10,6 +10,7 @@ const authRoutes_1 = __importDefault(require("./routes/authRoutes"));
 const tripRoutes_1 = __importDefault(require("./routes/tripRoutes"));
 const chatRoutes_1 = __importDefault(require("./routes/chatRoutes"));
 const hotelRoutes_1 = __importDefault(require("./routes/hotelRoutes"));
+const weatherRoutes_1 = __importDefault(require("./routes/weatherRoutes"));
 const errorHandler_1 = require("./middleware/errorHandler");
 dotenv_1.default.config();
 const app = (0, express_1.default)();
@@ -27,6 +28,7 @@ app.use("/api/auth", authRoutes_1.default);
 app.use("/api/trips", tripRoutes_1.default);
 app.use("/api/chat", chatRoutes_1.default);
 app.use("/api/hotels", hotelRoutes_1.default);
+app.use("/api/weather", weatherRoutes_1.default);
 // 404 handler for undefined routes
 app.use(errorHandler_1.notFoundHandler);
 // Global error handler (must be last)

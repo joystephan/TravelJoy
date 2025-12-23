@@ -418,6 +418,35 @@ class TripService {
   }
 
   /**
+   * Update a meal in the itinerary
+   */
+  async updateMeal(mealId: string, updates: Partial<{
+    name: string;
+    description: string;
+    latitude: number;
+    longitude: number;
+    mealType: string;
+    cost: number;
+    cuisine: string;
+    rating: number;
+    imageUrl: string;
+  }>) {
+    return prisma.meal.update({
+      where: { id: mealId },
+      data: updates,
+    });
+  }
+
+  /**
+   * Delete a meal from the itinerary
+   */
+  async deleteMeal(mealId: string) {
+    return prisma.meal.delete({
+      where: { id: mealId },
+    });
+  }
+
+  /**
    * Optimize existing trip based on new constraints
    */
   async optimizeTrip(

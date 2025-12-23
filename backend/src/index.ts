@@ -5,6 +5,7 @@ import authRoutes from "./routes/authRoutes";
 import tripRoutes from "./routes/tripRoutes";
 import chatRoutes from "./routes/chatRoutes";
 import hotelRoutes from "./routes/hotelRoutes";
+import weatherRoutes from "./routes/weatherRoutes";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler";
 
 dotenv.config();
@@ -27,6 +28,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/trips", tripRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/hotels", hotelRoutes);
+app.use("/api/weather", weatherRoutes);
 
 // 404 handler for undefined routes
 app.use(notFoundHandler);

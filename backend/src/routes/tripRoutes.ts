@@ -31,4 +31,14 @@ router.post(
   tripController.replaceActivity.bind(tripController)
 );
 
+// Meal management routes
+router.put(
+  "/meals/:mealId",
+  tripController.updateMeal.bind(tripController)
+);
+router.delete(
+  "/meals/:mealId",
+  tripController.deleteMeal.bind(tripController)
+);
+
 export default router;

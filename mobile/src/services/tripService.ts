@@ -157,6 +157,46 @@ class TripService {
     return response.data;
   }
 
+  async updateMeal(
+    mealId: string,
+    updates: Partial<{
+      name: string;
+      description: string;
+      latitude: number;
+      longitude: number;
+      mealType: string;
+      cost: number;
+      cuisine: string;
+      rating: number;
+      imageUrl: string;
+    }>
+  ): Promise<any> {
+    if (!getIsOnline()) {
+      await addPendingSyncOperation({
+        type: "UPDATE_MEAL",
+        data: { mealId, updates },
+      });
+
+      // Update local data optimistically
+      return { id: mealId, ...updates };
+    }
+
+    const response = await api.put(`/api/trips/meals/${mealId}`, updates);
+    return response.data;
+  }
+
+  async deleteMeal(mealId: string): Promise<void> {
+    if (!getIsOnline()) {
+      await addPendingSyncOperation({
+        type: "DELETE_MEAL",
+        data: { mealId },
+      });
+      return;
+    }
+
+    await api.delete(`/api/trips/meals/${mealId}`);
+  }
+
   async optimizeTrip(
     tripId: string,
     constraints: {

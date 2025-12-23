@@ -243,21 +243,32 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
             </View>
 
             {/* Terms and Conditions */}
-            <TouchableOpacity
-              style={styles.checkboxRow}
-              onPress={() => setAgreedToTerms(!agreedToTerms)}
-              activeOpacity={0.7}
-            >
-              <View style={[styles.checkbox, agreedToTerms && styles.checkboxChecked]}>
-                {agreedToTerms && <Text style={styles.checkmark}>✓</Text>}
-              </View>
+            <View style={styles.checkboxRow}>
+              <TouchableOpacity
+                onPress={() => setAgreedToTerms(!agreedToTerms)}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.checkbox, agreedToTerms && styles.checkboxChecked]}>
+                  {agreedToTerms && <Text style={styles.checkmark}>✓</Text>}
+                </View>
+              </TouchableOpacity>
               <Text style={styles.termsText}>
                 I agree to the{" "}
-                <Text style={styles.termsLink}>Terms of Service</Text>
+                <Text
+                  style={styles.termsLink}
+                  onPress={() => navigation.navigate("TermsOfService")}
+                >
+                  Terms of Service
+                </Text>
                 {" "}and{" "}
-                <Text style={styles.termsLink}>Privacy Policy</Text>
+                <Text
+                  style={styles.termsLink}
+                  onPress={() => navigation.navigate("PrivacyPolicy")}
+                >
+                  Privacy Policy
+                </Text>
               </Text>
-            </TouchableOpacity>
+            </View>
 
             {/* Register Button */}
             <TouchableOpacity
@@ -272,25 +283,6 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
                 <Text style={styles.registerButtonText}>Create Account</Text>
               )}
             </TouchableOpacity>
-
-            {/* Divider */}
-            <View style={styles.divider}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>or sign up with</Text>
-              <View style={styles.dividerLine} />
-            </View>
-
-            {/* Social Sign Up Buttons */}
-            <View style={styles.socialButtons}>
-              <TouchableOpacity style={styles.socialButton}>
-                <Text style={styles.socialIcon}>📱</Text>
-                <Text style={styles.socialText}>Google</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.socialButton}>
-                <Text style={styles.socialIcon}>📘</Text>
-                <Text style={styles.socialText}>Facebook</Text>
-              </TouchableOpacity>
-            </View>
           </View>
 
           {/* Sign In Link */}
@@ -392,6 +384,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: colors.gray300,
     marginRight: spacing.sm,
+    marginTop: 2,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -426,45 +419,6 @@ const styles = StyleSheet.create({
   registerButtonText: {
     ...typography.button,
     color: colors.white,
-  },
-  divider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: spacing.lg,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: colors.gray200,
-  },
-  dividerText: {
-    ...typography.body2,
-    color: colors.textLight,
-    marginHorizontal: spacing.md,
-  },
-  socialButtons: {
-    flexDirection: 'row',
-    gap: spacing.md,
-  },
-  socialButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.white,
-    borderRadius: borderRadius.lg,
-    padding: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.gray200,
-  },
-  socialIcon: {
-    fontSize: 20,
-    marginRight: spacing.sm,
-  },
-  socialText: {
-    ...typography.body2,
-    color: colors.textPrimary,
-    fontWeight: '600',
   },
   signinSection: {
     flexDirection: 'row',
