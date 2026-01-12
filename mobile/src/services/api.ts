@@ -6,22 +6,45 @@ import {
   getRetryDelay,
 } from "../utils/apiErrorHandler";
 
-// Get API URL from environment, with smart defaults
-let API_BASE_URL = process.env.EXPO_PUBLIC_API_URL;
+import Constants from 'expo-constants';
+import { Platform } from 'react-native';
 
-// If no API URL is set, try to detect if we're on a device and use local IP
-if (!API_BASE_URL) {
-  // For physical devices/emulators, localhost won't work
-  // Default to localhost for web/simulator, but warn for physical devices
-  API_BASE_URL = "http://localhost:3000";
+// Automatic IP detection for development
+function getAPIBaseURL(): string {
+  // First, check if explicitly set in .env
+  if (process.env.EXPO_PUBLIC_API_URL) {
+    return process.env.EXPO_PUBLIC_API_URL;
+  }
+
+  // For Expo Go, use the manifest's debuggerHost to get dev server IP
+  const debuggerHost = Constants.expoConfig?.hostUri;
   
-  // In production or if explicitly needed, you should set EXPO_PUBLIC_API_URL
-  // For physical devices, use your computer's IP: http://192.168.16.108:3000
+  if (debuggerHost) {
+    // Extract IP from debuggerHost (format: "192.168.1.1:8081" or "192.168.1.1:19000")
+    const host = debuggerHost.split(':')[0];
+    const apiURL = `http://${host}:3000`;
+    console.log("✅ Auto-detected backend URL from Expo dev server:", apiURL);
+    return apiURL;
+  }
+
+  // Fallback for different platforms
+  if (Platform.OS === 'android') {
+    // Android emulator can use 10.0.2.2 to reach host machine
+    console.warn("⚠️  Using Android emulator localhost (10.0.2.2:3000)");
+    return "http://10.0.2.2:3000";
+  }
+
+  // Last resort: localhost (works for iOS simulator and web)
+  console.warn("⚠️  Falling back to localhost:3000");
+  console.warn("💡 If this doesn't work, set EXPO_PUBLIC_API_URL in mobile/.env");
+  return "http://localhost:3000";
 }
+
+const API_BASE_URL = getAPIBaseURL();
 
 // Log the API URL being used (helpful for debugging)
 console.log("🚀 API Base URL:", API_BASE_URL);
-console.log("📱 If using a physical device, ensure this points to your computer's IP address");
+console.log("📱 Backend auto-detection enabled - no manual IP configuration needed!");
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -132,6 +155,18 @@ apiClient.interceptors.response.use(
       await AsyncStorage.removeItem("authToken");
       await AsyncStorage.removeItem("refreshToken");
       await AsyncStorage.removeItem("user");
+    }
+
+    // Handle network errors - if we can't reach the server after retries, clear auth
+    // This helps during development when switching networks or when backend IP changes
+    if (!error.response && !error.request) {
+      const retryCount = (originalRequest as any)._retry || 0;
+      if (retryCount >= 3) {
+        console.warn("⚠️  Backend unreachable after retries. Clearing auth to allow fresh login.");
+        await AsyncStorage.removeItem("authToken");
+        await AsyncStorage.removeItem("refreshToken");
+        await AsyncStorage.removeItem("user");
+      }
     }
 
     // Parse error
