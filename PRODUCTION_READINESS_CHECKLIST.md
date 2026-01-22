@@ -139,7 +139,7 @@ This checklist ensures that all components of TravelJoy are ready for production
   - [ ] User login flow tested
   - [ ] Subscription flow tested
   - [ ] Trip creation tested
-  - [ ] Itinerary generation tested
+  - [ ] trip generation tested
   - [ ] Chat assistant tested
 
 - [ ] **Load Testing**
@@ -303,8 +303,8 @@ This checklist ensures that all components of TravelJoy are ready for production
 - [ ] **Trip Planning**
 
   - [ ] User can create trip
-  - [ ] AI generates itinerary successfully
-  - [ ] Itinerary displays correctly
+  - [ ] AI generates trip successfully
+  - [ ] trip displays correctly
   - [ ] Map integration working
   - [ ] Weather data displays correctly
   - [ ] User can edit activities
@@ -341,7 +341,7 @@ This checklist ensures that all components of TravelJoy are ready for production
 
 - [ ] **AI Service (Ollama/HuggingFace)**
   - [ ] AI service accessible
-  - [ ] Itinerary generation working
+  - [ ] trip generation working
   - [ ] Chat responses working
   - [ ] Response times acceptable (< 60s)
 
@@ -356,7 +356,7 @@ This checklist ensures that all components of TravelJoy are ready for production
   - [ ] Health check: < 100ms
   - [ ] Authentication: < 500ms
   - [ ] Trip creation: < 1s
-  - [ ] Itinerary generation: < 60s
+  - [ ] trip generation: < 60s
   - [ ] Chat response: < 10s
 
 - [ ] **Caching**

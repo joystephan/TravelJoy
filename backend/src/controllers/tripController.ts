@@ -73,7 +73,7 @@ export class TripController {
       });
 
       res.status(201).json({
-        message: "Trip created successfully. Itinerary is being generated.",
+        message: "Trip created successfully. trip is being generated.",
         trip,
       });
     } catch (error: any) {

@@ -10,7 +10,7 @@ const nominatimService_1 = __importDefault(require("./nominatimService"));
 const database_1 = __importDefault(require("../config/database"));
 class TripService {
     /**
-     * Create a new trip with AI-generated itinerary
+     * Create a new trip with AI-generated trip
      */
     async createTrip(tripData) {
         // Validate user exists
@@ -31,9 +31,9 @@ class TripService {
                 status: "generating",
             },
         });
-        // Generate itinerary asynchronously (don't block the response)
-        this.generateItineraryForTrip(trip.id, tripData).catch(async (error) => {
-            console.error(`Failed to generate itinerary for trip ${trip.id}:`, error);
+        // Generate trip asynchronously (don't block the response)
+        this.generatetripForTrip(trip.id, tripData).catch(async (error) => {
+            console.error(`Failed to generate trip for trip ${trip.id}:`, error);
             // Update trip status to failed
             try {
                 await database_1.default.trip.update({
@@ -48,9 +48,9 @@ class TripService {
         return trip;
     }
     /**
-     * Generate itinerary for a trip using AI
+     * Generate trip for a trip using AI
      */
-    async generateItineraryForTrip(tripId, tripData) {
+    async generatetripForTrip(tripId, tripData) {
         try {
             // Get destination coordinates
             const locationResults = await nominatimService_1.default.searchPlaces(tripData.destination);
@@ -85,9 +85,9 @@ class TripService {
                 weatherData,
                 placesData,
             };
-            // Generate itinerary using AI
-            const dailyPlans = await aiService_1.aiService.generateItinerary(aiParams);
-            // Save itinerary to database
+            // Generate trip using AI
+            const dailyPlans = await aiService_1.aiService.generatetrip(aiParams);
+            // Save trip to database
             await this.saveDailyPlans(tripId, dailyPlans);
             // Update trip status
             await database_1.default.trip.update({
@@ -97,7 +97,7 @@ class TripService {
             return dailyPlans;
         }
         catch (error) {
-            console.error("Itinerary generation failed:", error);
+            console.error("trip generation failed:", error);
             await database_1.default.trip.update({
                 where: { id: tripId },
                 data: { status: "failed" },
@@ -192,10 +192,10 @@ class TripService {
         return true; // All days have identical content
     }
     /**
-     * Regenerate itinerary for an existing trip
+     * Regenerate trip for an existing trip
      */
-    async regenerateItineraryForTrip(trip) {
-        console.log(`Regenerating itinerary for trip ${trip.id} (old trip with identical content)`);
+    async regeneratetripForTrip(trip) {
+        console.log(`Regenerating trip for trip ${trip.id} (old trip with identical content)`);
         // Get destination coordinates (with error handling)
         let locationResults;
         try {
@@ -229,17 +229,17 @@ class TripService {
             weatherData,
             placesData: locationResults,
         };
-        // Generate new itinerary using AI (will use updated fallback if AI fails)
+        // Generate new trip using AI (will use updated fallback if AI fails)
         let dailyPlans;
         try {
-            dailyPlans = await aiService_1.aiService.generateItinerary(aiParams);
+            dailyPlans = await aiService_1.aiService.generatetrip(aiParams);
             if (!dailyPlans || dailyPlans.length === 0) {
-                throw new Error("Generated itinerary is empty");
+                throw new Error("Generated trip is empty");
             }
         }
         catch (error) {
-            console.error(`Failed to generate itinerary:`, error);
-            throw new Error(`Failed to regenerate: Could not generate new itinerary`);
+            console.error(`Failed to generate trip:`, error);
+            throw new Error(`Failed to regenerate: Could not generate new trip`);
         }
         // Delete old daily plans and their related data (cascade delete will handle related records)
         try {
@@ -254,7 +254,7 @@ class TripService {
         // Save new daily plans
         try {
             await this.saveDailyPlans(trip.id, dailyPlans);
-            console.log(`Successfully regenerated itinerary for trip ${trip.id} with ${dailyPlans.length} days`);
+            console.log(`Successfully regenerated trip for trip ${trip.id} with ${dailyPlans.length} days`);
         }
         catch (error) {
             console.error(`Failed to save new daily plans:`, error);
@@ -262,7 +262,7 @@ class TripService {
         }
     }
     /**
-     * Get trip by ID with full itinerary
+     * Get trip by ID with full trip
      * Automatically regenerates old trips with identical content
      */
     async getTripById(tripId) {
@@ -292,7 +292,7 @@ class TripService {
                 // Regenerate in the background (non-blocking)
                 // This ensures the API responds immediately without timeout
                 // The next time the user loads this trip, they'll get the regenerated version
-                this.regenerateItineraryForTrip(trip).catch((error) => {
+                this.regeneratetripForTrip(trip).catch((error) => {
                     console.error(`Background regeneration failed for trip ${tripId}:`, error);
                     // Don't throw - regeneration failure shouldn't affect the current request
                 });
@@ -323,7 +323,7 @@ class TripService {
         });
     }
     /**
-     * Update an activity in the itinerary
+     * Update an activity in the trip
      */
     async updateActivity(activityId, updates) {
         return database_1.default.activity.update({
@@ -332,7 +332,7 @@ class TripService {
         });
     }
     /**
-     * Delete an activity from the itinerary
+     * Delete an activity from the trip
      */
     async deleteActivity(activityId) {
         return database_1.default.activity.delete({
@@ -357,7 +357,7 @@ class TripService {
         });
     }
     /**
-     * Update a meal in the itinerary
+     * Update a meal in the trip
      */
     async updateMeal(mealId, updates) {
         return database_1.default.meal.update({
@@ -366,7 +366,7 @@ class TripService {
         });
     }
     /**
-     * Delete a meal from the itinerary
+     * Delete a meal from the trip
      */
     async deleteMeal(mealId) {
         return database_1.default.meal.delete({

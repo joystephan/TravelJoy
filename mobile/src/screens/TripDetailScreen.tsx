@@ -444,16 +444,16 @@ export default function TripDetailScreen({
         <Text style={styles.emptyEmoji}>✈️</Text>
         <Text style={styles.emptyText}>
           {trip?.status === "generating" || trip?.status === "pending"
-            ? "Your itinerary is being generated..."
+            ? "Your trip is being generated..."
             : trip?.status === "failed"
-            ? "Failed to generate itinerary. Please try again."
-            : "No itinerary available"}
+            ? "Failed to generate trip. Please try again."
+            : "No trip available"}
         </Text>
         {(trip?.status === "generating" || trip?.status === "pending") && (
           <View style={styles.pollingIndicator}>
             <ActivityIndicator size="large" color={colors.primary} />
             <Text style={styles.pollingText}>
-              Creating your perfect itinerary...
+              Creating your perfect trip...
             </Text>
             <Text style={styles.pollingSubtext}>
               This usually takes 10-15 seconds

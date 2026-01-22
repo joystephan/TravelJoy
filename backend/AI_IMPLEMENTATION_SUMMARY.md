@@ -16,9 +16,9 @@ All subtasks have been completed successfully.
 - Ollama local LLM integration with configurable models
 - HuggingFace API integration as alternative
 - Response caching with Redis (1-hour TTL)
-- Prompt template system for itinerary generation
+- Prompt template system for trip generation
 - Response parsing and validation
-- Fallback itinerary generation on AI failure
+- Fallback trip generation on AI failure
 - Environment configuration in `.env.example`
 
 **Configuration:**
@@ -30,7 +30,7 @@ AI_MODEL=llama2
 HUGGINGFACE_API_KEY=
 ```
 
-### 6.2 Build AI-powered itinerary generation ✅
+### 6.2 Build AI-powered trip generation ✅
 
 **Files Created:**
 
@@ -41,7 +41,7 @@ HUGGINGFACE_API_KEY=
 **Features Implemented:**
 
 - Trip creation with AI-generated itineraries
-- Asynchronous itinerary generation
+- Asynchronous trip generation
 - Integration with weather and location services
 - Budget optimization across trip days
 - Preference-based planning (activity type, food, transport, schedule)
@@ -53,7 +53,7 @@ HUGGINGFACE_API_KEY=
 
 **API Endpoints:**
 
-- `POST /api/trips` - Create trip with AI itinerary
+- `POST /api/trips` - Create trip with AI trip
 - `GET /api/trips` - Get all user trips
 - `GET /api/trips/:tripId` - Get specific trip
 - `DELETE /api/trips/:tripId` - Delete trip
@@ -93,7 +93,7 @@ HUGGINGFACE_API_KEY=
 
 - `weather` - Weather forecast
 - `budget` - Budget breakdown
-- `optimize` - Optimize itinerary
+- `optimize` - Optimize trip
 - `restaurants` - Restaurant suggestions
 - `activities` - Alternative activities
 - `transport` - Transportation options
@@ -130,7 +130,7 @@ HUGGINGFACE_API_KEY=
 
 "THE TravelJoy_System SHALL use AI to generate multi-day plans optimized by budget constraints"
 
-- Implemented in `aiService.generateItinerary()` with budget distribution
+- Implemented in `aiService.generatetrip()` with budget distribution
 
 ### Requirement 3.2 ✅
 
@@ -173,7 +173,7 @@ HUGGINGFACE_API_KEY=
 1. **Dual AI Provider Support**: Seamlessly switch between Ollama and HuggingFace
 2. **Intelligent Caching**: Redis caching reduces API costs and improves response times
 3. **Graceful Degradation**: Fallback itineraries when AI fails
-4. **Async Processing**: Non-blocking itinerary generation
+4. **Async Processing**: Non-blocking trip generation
 5. **Context Management**: Maintains conversation history per user/trip
 6. **Type Safety**: Full TypeScript implementation with proper interfaces
 7. **Error Handling**: Comprehensive error handling with user-friendly messages

@@ -51,7 +51,7 @@ This guide covers the integration between frontend (React Native mobile app) and
 - `GET /api/trips/:id` - Get trip details
 - `PUT /api/trips/:id` - Update trip
 - `DELETE /api/trips/:id` - Delete trip
-- `POST /api/trips/:id/generate` - Generate itinerary
+- `POST /api/trips/:id/generate` - Generate trip
 - `PUT /api/trips/:id/activities/:activityId` - Update activity
 
 ### Chat Endpoints
@@ -128,7 +128,7 @@ This will test:
 4. Subscription plan retrieval
 5. Subscription status check
 6. Trip creation
-7. Itinerary generation
+7. trip generation
 8. Trip retrieval
 9. Chat assistant functionality
 
@@ -179,9 +179,9 @@ console.log(`Success Rate: ${summary.successRate.toFixed(1)}%`);
    - Submit trip creation
    - Verify trip is created
 
-4. **Itinerary Generation**
+4. **trip Generation**
 
-   - Wait for AI to generate itinerary (may take 30-60 seconds)
+   - Wait for AI to generate trip (may take 30-60 seconds)
    - Verify daily plans are displayed
    - Check activities, meals, and transportation
    - Verify map markers are shown

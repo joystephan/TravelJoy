@@ -105,13 +105,13 @@ class AIService {
         }
     }
     /**
-     * Create prompt template for itinerary generation
+     * Create prompt template for trip generation
      */
-    createItineraryPrompt(params) {
+    createtripPrompt(params) {
         const { destination, budget, startDate, endDate, preferences, weatherData, placesData, } = params;
         const days = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
         const dailyBudget = budget / days;
-        let prompt = `You are a local travel expert for ${destination}. Generate a detailed ${days}-day travel itinerary using REAL, SPECIFIC places in ${destination}.
+        let prompt = `You are a local travel expert for ${destination}. Generate a detailed ${days}-day travel trip using REAL, SPECIFIC places in ${destination}.
 
 TRIP DETAILS:
 - Destination: ${destination}
@@ -147,7 +147,7 @@ CRITICAL REQUIREMENTS:
 6. **COMPLETE MEALS**: Include breakfast, lunch, and dinner for each day - use DIFFERENT real restaurants for each meal
 7. **REALISTIC TRANSPORTATION**: Add transportation between activities using real modes available in ${destination}
 8. **SCHEDULE MATCHING**: ${preferences.schedulePreference === "relaxed" ? "2-3 activities per day" : preferences.schedulePreference === "packed" ? "5+ activities per day" : "3-4 activities per day"}
-9. **VERIFY BUDGET**: After creating the itinerary, sum all daily costs to ensure total ≤ $${budget}
+9. **VERIFY BUDGET**: After creating the trip, sum all daily costs to ensure total ≤ $${budget}
 
 EXAMPLES OF WHAT TO DO:
 ✅ GOOD: "Visit the Eiffel Tower at Champ de Mars, 5 Avenue Anatole France"
@@ -161,7 +161,7 @@ EXAMPLES OF WHAT NOT TO DO:
 
 FORMAT YOUR RESPONSE AS JSON:
 {
-  "itinerary": [
+  "trip": [
     {
       "day": 1,
       "date": "YYYY-MM-DD",
@@ -202,13 +202,13 @@ FORMAT YOUR RESPONSE AS JSON:
   ]
 }
 
-Generate the complete itinerary now:`;
+Generate the complete trip now:`;
         return prompt;
     }
     /**
-     * Parse and validate AI response for itinerary generation
+     * Parse and validate AI response for trip generation
      */
-    async parseItineraryResponse(response, params) {
+    async parsetripResponse(response, params) {
         try {
             // Extract JSON from response (handle cases where AI adds extra text)
             const jsonMatch = response.match(/\{[\s\S]*\}/);
@@ -216,11 +216,11 @@ Generate the complete itinerary now:`;
                 throw new Error("No valid JSON found in AI response");
             }
             const parsed = JSON.parse(jsonMatch[0]);
-            if (!parsed.itinerary || !Array.isArray(parsed.itinerary)) {
-                throw new Error("Invalid itinerary format");
+            if (!parsed.trip || !Array.isArray(parsed.trip)) {
+                throw new Error("Invalid trip format");
             }
             // Convert to DailyPlan format
-            const dailyPlans = parsed.itinerary.map((day) => ({
+            const dailyPlans = parsed.trip.map((day) => ({
                 date: new Date(day.date),
                 activities: day.activities || [],
                 meals: day.meals || [],
@@ -233,8 +233,8 @@ Generate the complete itinerary now:`;
         }
         catch (error) {
             console.error("Failed to parse AI response:", error);
-            // Return fallback itinerary
-            return await this.generateFallbackItinerary(params);
+            // Return fallback trip
+            return await this.generateFallbacktrip(params);
         }
     }
     /**
@@ -286,13 +286,13 @@ Generate the complete itinerary now:`;
         return adjustedPlans;
     }
     /**
-     * Generate fallback itinerary if AI fails - using REAL places from LocationIQ
+     * Generate fallback trip if AI fails - using REAL places from LocationIQ
      */
-    async generateFallbackItinerary(params) {
+    async generateFallbacktrip(params) {
         const { startDate, endDate, budget, destination, placesData } = params;
         const days = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
         const dailyBudget = budget / days;
-        console.log(`🔄 Generating fallback itinerary with REAL places for ${destination}...`);
+        console.log(`🔄 Generating fallback trip with REAL places for ${destination}...`);
         // Fetch REAL attractions and restaurants from LocationIQ
         let realAttractions = [];
         let realRestaurants = [];
@@ -488,16 +488,16 @@ Generate the complete itinerary now:`;
             });
         }
         const totalBeforeEnforcement = plans.reduce((sum, p) => sum + p.estimatedCost, 0);
-        console.log(`Fallback itinerary BEFORE enforcement:`, {
+        console.log(`Fallback trip BEFORE enforcement:`, {
             totalCost: totalBeforeEnforcement,
             budget,
             overBudget: totalBeforeEnforcement > budget,
             dailyBreakdown: plans.map((p, i) => ({ day: i + 1, cost: p.estimatedCost })),
         });
-        // Apply budget enforcement to fallback itinerary too
+        // Apply budget enforcement to fallback trip too
         const enforcedPlans = this.enforceBudgetConstraint(plans, budget);
         const totalAfterEnforcement = enforcedPlans.reduce((sum, p) => sum + p.estimatedCost, 0);
-        console.log(`Fallback itinerary AFTER enforcement:`, {
+        console.log(`Fallback trip AFTER enforcement:`, {
             totalCost: totalAfterEnforcement,
             budget,
             withinBudget: totalAfterEnforcement <= budget,
@@ -506,18 +506,18 @@ Generate the complete itinerary now:`;
         return enforcedPlans;
     }
     /**
-     * Generate travel itinerary using AI
+     * Generate travel trip using AI
      */
-    async generateItinerary(params) {
+    async generatetrip(params) {
         const systemPrompt = "You are an expert travel planner. Generate detailed, realistic, and budget-conscious travel itineraries in JSON format.";
-        const prompt = this.createItineraryPrompt(params);
+        const prompt = this.createtripPrompt(params);
         try {
             const response = await this.generateCompletion(prompt, systemPrompt);
-            return await this.parseItineraryResponse(response, params);
+            return await this.parsetripResponse(response, params);
         }
         catch (error) {
-            console.error("AI itinerary generation failed:", error);
-            return await this.generateFallbackItinerary(params);
+            console.error("AI trip generation failed:", error);
+            return await this.generateFallbacktrip(params);
         }
     }
     /**
@@ -574,9 +574,9 @@ Generate the complete itinerary now:`;
      */
     async optimizePlan(plan, constraints) {
         const systemPrompt = "You are an expert travel planner. Optimize travel itineraries based on constraints while maintaining the overall structure.";
-        const prompt = `Optimize this travel itinerary based on the following constraints:
+        const prompt = `Optimize this travel trip based on the following constraints:
 
-CURRENT ITINERARY:
+CURRENT trip:
 ${JSON.stringify(plan, null, 2)}
 
 CONSTRAINTS:
@@ -586,14 +586,14 @@ ${constraints.preferences
             ? `- Preferences: ${JSON.stringify(constraints.preferences)}`
             : ""}
 
-Provide the optimized itinerary in the same JSON format, adjusting activities, costs, and timing as needed.`;
+Provide the optimized trip in the same JSON format, adjusting activities, costs, and timing as needed.`;
         try {
             const response = await this.generateCompletion(prompt, systemPrompt);
             const jsonMatch = response.match(/\{[\s\S]*\}/);
             if (jsonMatch) {
                 const parsed = JSON.parse(jsonMatch[0]);
-                if (parsed.itinerary) {
-                    return parsed.itinerary.map((day) => ({
+                if (parsed.trip) {
+                    return parsed.trip.map((day) => ({
                         date: new Date(day.date),
                         activities: day.activities || [],
                         meals: day.meals || [],

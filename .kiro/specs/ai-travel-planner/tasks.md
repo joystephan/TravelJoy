@@ -63,7 +63,7 @@
 
   - [x] 4.2 Implement trip and activity models
 
-    - Create Trip model with itinerary structure
+    - Create Trip model with trip structure
     - Implement Activity, Meal, and Transportation models
     - Add DailyPlan model with cost tracking
     - _Requirements: 2.1, 2.2, 2.4_
@@ -106,11 +106,11 @@
   - [x] 6.1 Set up Ollama local LLM or HuggingFace integration
 
     - Configure AI model for travel planning
-    - Create prompt templates for itinerary generation
+    - Create prompt templates for trip generation
     - Implement response parsing and validation
     - _Requirements: 3.1, 3.3, 3.4_
 
-  - [x] 6.2 Build AI-powered itinerary generation
+  - [x] 6.2 Build AI-powered trip generation
 
     - Create trip planning algorithm with AI integration
     - Implement budget and preference optimization
@@ -126,7 +126,7 @@
 
   - [ ]\* 6.4 Write AI service tests
     - Unit tests for AI response processing
-    - Integration tests for itinerary generation
+    - Integration tests for trip generation
     - _Requirements: 3.1, 4.1_
 
 - [x] 7. Build trip creation and management features
@@ -142,13 +142,13 @@
   - [x] 7.2 Implement trip planning API endpoints
 
     - Create trip creation endpoint with validation
-    - Implement itinerary generation endpoint
+    - Implement trip generation endpoint
     - Add trip modification and update endpoints
     - _Requirements: 2.1, 2.4, 3.4_
 
   - [x] 7.3 Build trip display and editing screens
 
-    - Create daily itinerary display
+    - Create daily trip display
     - Implement activity editing and replacement
     - Add map integration with OpenStreetMap
     - Create weather information overlay

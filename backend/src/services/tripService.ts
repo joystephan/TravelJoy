@@ -1,4 +1,4 @@
-import { aiService, ItineraryGenerationParams, DailyPlan } from "./aiService";
+import { aiService, tripGenerationParams, DailyPlan } from "./aiService";
 import weatherService from "./weatherService";
 import nominatimService from "./nominatimService";
 import prisma from "../config/database";
@@ -29,7 +29,7 @@ export interface ActivityUpdate {
 
 class TripService {
   /**
-   * Create a new trip with AI-generated itinerary
+   * Create a new trip with AI-generated trip
    */
   async createTrip(tripData: TripInput) {
     // Validate user exists
@@ -53,9 +53,9 @@ class TripService {
       },
     });
 
-    // Generate itinerary asynchronously (don't block the response)
-    this.generateItineraryForTrip(trip.id, tripData).catch(async (error) => {
-      console.error(`Failed to generate itinerary for trip ${trip.id}:`, error);
+    // Generate trip asynchronously (don't block the response)
+    this.generatetripForTrip(trip.id, tripData).catch(async (error) => {
+      console.error(`Failed to generate trip for trip ${trip.id}:`, error);
       // Update trip status to failed
       try {
         await prisma.trip.update({
@@ -71,9 +71,9 @@ class TripService {
   }
 
   /**
-   * Generate itinerary for a trip using AI
+   * Generate trip for a trip using AI
    */
-  async generateItineraryForTrip(tripId: string, tripData: TripInput) {
+  async generatetripForTrip(tripId: string, tripData: TripInput) {
     try {
       // Get destination coordinates
       const locationResults = await nominatimService.searchPlaces(
@@ -105,7 +105,7 @@ class TripService {
       }
 
       // Prepare AI generation parameters
-      const aiParams: ItineraryGenerationParams = {
+      const aiParams: tripGenerationParams = {
         destination: tripData.destination,
         budget: tripData.budget,
         startDate: tripData.startDate,
@@ -115,10 +115,10 @@ class TripService {
         placesData,
       };
 
-      // Generate itinerary using AI
-      const dailyPlans = await aiService.generateItinerary(aiParams);
+      // Generate trip using AI
+      const dailyPlans = await aiService.generatetrip(aiParams);
 
-      // Save itinerary to database
+      // Save trip to database
       await this.saveDailyPlans(tripId, dailyPlans);
 
       // Update trip status
@@ -129,7 +129,7 @@ class TripService {
 
       return dailyPlans;
     } catch (error) {
-      console.error("Itinerary generation failed:", error);
+      console.error("trip generation failed:", error);
       await prisma.trip.update({
         where: { id: tripId },
         data: { status: "failed" },
@@ -234,10 +234,10 @@ class TripService {
   }
 
   /**
-   * Regenerate itinerary for an existing trip
+   * Regenerate trip for an existing trip
    */
-  private async regenerateItineraryForTrip(trip: any): Promise<void> {
-    console.log(`Regenerating itinerary for trip ${trip.id} (old trip with identical content)`);
+  private async regeneratetripForTrip(trip: any): Promise<void> {
+    console.log(`Regenerating trip for trip ${trip.id} (old trip with identical content)`);
     
     // Get destination coordinates (with error handling)
     let locationResults;
@@ -264,7 +264,7 @@ class TripService {
     }
 
     // Prepare AI generation parameters
-    const aiParams: ItineraryGenerationParams = {
+    const aiParams: tripGenerationParams = {
       destination: trip.destination,
       budget: trip.budget,
       startDate: new Date(trip.startDate),
@@ -274,16 +274,16 @@ class TripService {
       placesData: locationResults,
     };
 
-    // Generate new itinerary using AI (will use updated fallback if AI fails)
+    // Generate new trip using AI (will use updated fallback if AI fails)
     let dailyPlans;
     try {
-      dailyPlans = await aiService.generateItinerary(aiParams);
+      dailyPlans = await aiService.generatetrip(aiParams);
       if (!dailyPlans || dailyPlans.length === 0) {
-        throw new Error("Generated itinerary is empty");
+        throw new Error("Generated trip is empty");
       }
     } catch (error) {
-      console.error(`Failed to generate itinerary:`, error);
-      throw new Error(`Failed to regenerate: Could not generate new itinerary`);
+      console.error(`Failed to generate trip:`, error);
+      throw new Error(`Failed to regenerate: Could not generate new trip`);
     }
 
     // Delete old daily plans and their related data (cascade delete will handle related records)
@@ -299,7 +299,7 @@ class TripService {
     // Save new daily plans
     try {
       await this.saveDailyPlans(trip.id, dailyPlans);
-      console.log(`Successfully regenerated itinerary for trip ${trip.id} with ${dailyPlans.length} days`);
+      console.log(`Successfully regenerated trip for trip ${trip.id} with ${dailyPlans.length} days`);
     } catch (error) {
       console.error(`Failed to save new daily plans:`, error);
       throw new Error(`Failed to regenerate: Could not save new plans`);
@@ -307,7 +307,7 @@ class TripService {
   }
 
   /**
-   * Get trip by ID with full itinerary
+   * Get trip by ID with full trip
    * Automatically regenerates old trips with identical content
    */
   async getTripById(tripId: string) {
@@ -341,7 +341,7 @@ class TripService {
         // Regenerate in the background (non-blocking)
         // This ensures the API responds immediately without timeout
         // The next time the user loads this trip, they'll get the regenerated version
-        this.regenerateItineraryForTrip(trip).catch((error) => {
+        this.regeneratetripForTrip(trip).catch((error) => {
           console.error(`Background regeneration failed for trip ${tripId}:`, error);
           // Don't throw - regeneration failure shouldn't affect the current request
         });
@@ -376,7 +376,7 @@ class TripService {
   }
 
   /**
-   * Update an activity in the itinerary
+   * Update an activity in the trip
    */
   async updateActivity(activityId: string, updates: ActivityUpdate) {
     return prisma.activity.update({
@@ -386,7 +386,7 @@ class TripService {
   }
 
   /**
-   * Delete an activity from the itinerary
+   * Delete an activity from the trip
    */
   async deleteActivity(activityId: string) {
     return prisma.activity.delete({
@@ -418,7 +418,7 @@ class TripService {
   }
 
   /**
-   * Update a meal in the itinerary
+   * Update a meal in the trip
    */
   async updateMeal(mealId: string, updates: Partial<{
     name: string;
@@ -438,7 +438,7 @@ class TripService {
   }
 
   /**
-   * Delete a meal from the itinerary
+   * Delete a meal from the trip
    */
   async deleteMeal(mealId: string) {
     return prisma.meal.delete({

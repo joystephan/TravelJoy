@@ -2,7 +2,7 @@
 
 ## Overview
 
-The AI service provides intelligent travel planning capabilities using either Ollama (local LLM) or HuggingFace API. It powers itinerary generation, trip optimization, and conversational chat assistance.
+The AI service provides intelligent travel planning capabilities using either Ollama (local LLM) or HuggingFace API. It powers trip generation, trip optimization, and conversational chat assistance.
 
 ## Configuration
 
@@ -154,7 +154,7 @@ Available quick actions:
 
 - `weather` - Get weather forecast
 - `budget` - Show budget breakdown
-- `optimize` - Optimize itinerary
+- `optimize` - Optimize trip
 - `restaurants` - Suggest restaurants
 - `activities` - Alternative activities
 - `transport` - Transportation options
@@ -191,7 +191,7 @@ Authorization: Bearer <token>
 
 ## Features
 
-### 1. AI-Powered Itinerary Generation
+### 1. AI-Powered trip Generation
 
 The service generates detailed multi-day itineraries including:
 
@@ -239,7 +239,7 @@ If AI generation fails, the service provides:
 
 ## Response Formats
 
-### Itinerary Response
+### trip Response
 
 ```json
 {

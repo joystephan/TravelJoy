@@ -62,7 +62,7 @@ graph TB
 
 3. **TripPlanScreen**
 
-   - Daily itinerary display
+   - Daily trip display
    - Interactive map integration
    - Edit/replace activity functionality
    - Weather information overlay
@@ -113,7 +113,7 @@ interface AuthService {
 ```typescript
 interface TripService {
   createTrip(tripData: TripInput): Promise<Trip>;
-  generateItinerary(tripId: string): Promise<Itinerary>;
+  generatetrip(tripId: string): Promise<trip>;
   updateActivity(
     activityId: string,
     updates: ActivityUpdate
@@ -126,7 +126,7 @@ interface TripService {
 
 ```typescript
 interface AIService {
-  generateItinerary(preferences: TravelPreferences): Promise<DailyPlan[]>;
+  generatetrip(preferences: TravelPreferences): Promise<DailyPlan[]>;
   processChat(message: string, context: ChatContext): Promise<ChatResponse>;
   optimizePlan(
     plan: DailyPlan[],
@@ -191,7 +191,7 @@ interface Trip {
   startDate: Date;
   endDate: Date;
   preferences: TravelPreferences;
-  itinerary: DailyPlan[];
+  trip: DailyPlan[];
   status: TripStatus;
   createdAt: Date;
 }
@@ -330,7 +330,7 @@ interface ErrorResponse {
 ### AI Optimization
 
 - **Prompt Engineering**: Optimized prompts for faster, better responses
-- **Response Caching**: Cache similar itinerary requests
+- **Response Caching**: Cache similar trip requests
 - **Batch Processing**: Group multiple AI requests when possible
 - **Token Management**: Efficient token usage to minimize costs
 
@@ -401,7 +401,7 @@ interface ErrorResponse {
 
 - **Usage**: AI text generation for travel planning
 - **Rate Limits**: 30,000 characters/month free
-- **Features**: Travel itinerary generation, chat responses
+- **Features**: Travel trip generation, chat responses
 
 ### Ollama (Local LLM)
 

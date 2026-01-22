@@ -18,7 +18,7 @@ Transform your travel planning with TravelJoy, the intelligent mobile app that c
 
 **Key Features:**
 
-🤖 AI-Powered Itinerary Generation
+🤖 AI-Powered trip Generation
 Let our smart AI create detailed day-by-day travel plans including activities, dining recommendations, and transportation options. Just tell us where you want to go, your budget, and preferences – we'll handle the rest.
 
 🗺️ Interactive Maps & Navigation
@@ -28,10 +28,10 @@ Visualize your entire trip on interactive maps with all your activities, restaur
 Plan better with integrated weather forecasts for your destination. Our AI adjusts recommendations based on weather conditions to ensure you have the best experience.
 
 💬 Smart Travel Assistant
-Chat with our AI assistant for instant travel advice, restaurant recommendations, and quick itinerary modifications. Ask questions in natural language and get helpful responses.
+Chat with our AI assistant for instant travel advice, restaurant recommendations, and quick trip modifications. Ask questions in natural language and get helpful responses.
 
 💰 Budget-Conscious Planning
-Set your budget and let TravelJoy optimize your itinerary to maximize value. Track estimated costs for activities, meals, and transportation throughout your trip.
+Set your budget and let TravelJoy optimize your trip to maximize value. Track estimated costs for activities, meals, and transportation throughout your trip.
 
 ✈️ Multi-Day Trip Planning
 Create comprehensive travel plans for weekend getaways or extended vacations. Our AI considers opening hours, travel times, and optimal routing for seamless experiences.
@@ -48,7 +48,7 @@ Customize your experience with preferences for:
 Access your saved trips even without internet connection. Perfect for international travel when data is limited.
 
 🔄 Easy Modifications
-Don't like a suggestion? Easily edit or replace any activity with alternatives. Your itinerary adapts to your changes instantly.
+Don't like a suggestion? Easily edit or replace any activity with alternatives. Your trip adapts to your changes instantly.
 
 **Perfect For:**
 
@@ -70,11 +70,11 @@ Start planning your dream vacation today with TravelJoy!
 
 ### Keywords (iOS - 100 characters max)
 
-travel planner,trip planner,itinerary,vacation,AI travel,travel guide,trip organizer,travel app
+travel planner,trip planner,trip,vacation,AI travel,travel guide,trip organizer,travel app
 
 ### Keywords (Android - separate by commas)
 
-travel planner, trip planner, itinerary maker, vacation planner, AI travel assistant, travel guide, trip organizer, travel app, destination guide, travel recommendations, trip builder, holiday planner
+travel planner, trip planner, trip maker, vacation planner, AI travel assistant, travel guide, trip organizer, travel app, destination guide, travel recommendations, trip builder, holiday planner
 
 ### Category
 
@@ -148,7 +148,7 @@ https://traveljoy.com
    - Demonstrate easy input process
    - Show destination search with autocomplete
 
-3. **Generated Itinerary**
+3. **Generated trip**
 
    - Display beautiful day-by-day schedule
    - Show activity cards with images
@@ -195,7 +195,7 @@ https://traveljoy.com
 
 1. Quick app walkthrough (5 seconds)
 2. Creating a trip (10 seconds)
-3. Viewing generated itinerary (8 seconds)
+3. Viewing generated trip (8 seconds)
 4. Using chat assistant (7 seconds)
 5. Call to action (5 seconds)
 
@@ -233,7 +233,7 @@ Welcome to TravelJoy! 🎉
 
 This is our initial release featuring:
 
-✨ AI-powered itinerary generation
+✨ AI-powered trip generation
 🗺️ Interactive maps with OpenStreetMap
 ☀️ Real-time weather integration
 💬 Smart travel assistant chat
@@ -296,7 +296,7 @@ Any future expiry date, any CVC
 1. Log in with test account
 2. Create a new trip to "Paris, France"
 3. Set budget to $2000, dates 7 days from now
-4. Select preferences and generate itinerary
+4. Select preferences and generate trip
 5. Explore map view and chat assistant
 6. Test subscription flow with test card
 
@@ -313,7 +313,7 @@ Any future expiry date, any CVC
 
 - travel planner
 - trip planner
-- itinerary maker
+- trip maker
 - AI travel
 - vacation planner
 

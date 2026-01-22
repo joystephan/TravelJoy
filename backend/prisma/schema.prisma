@@ -8,49 +8,48 @@ datasource db {
 }
 
 model User {
-  id            String         @id @default(uuid())
-  email         String         @unique
-  passwordHash  String
-  firstName     String?
-  lastName      String?
-  tripsThisMonth Int           @default(0)
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  trips         Trip[]
-  subscription  Subscription?
-  preferences   UserPreferences?
+  id             String           @id @default(uuid())
+  email          String           @unique
+  passwordHash   String
+  firstName      String?
+  lastName       String?
+  tripsThisMonth Int              @default(0)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  subscription   Subscription?
+  trips          Trip[]
+  preferences    UserPreferences?
 }
 
 model UserPreferences {
-  id                String   @id @default(uuid())
-  userId            String   @unique
-  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  activityType      String?
-  foodPreference    String?
+  id                  String   @id @default(uuid())
+  userId              String   @unique
+  activityType        String?
+  foodPreference      String?
   transportPreference String?
-  schedulePreference String?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  schedulePreference  String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Subscription {
-  id                    String   @id @default(uuid())
-  userId                String   @unique
-  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  planId                String
-  status                String
-  currentPeriodStart    DateTime
-  currentPeriodEnd      DateTime
-  cancelAtPeriodEnd     Boolean  @default(false)
-  stripeSubscriptionId  String   @unique
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  id                   String   @id @default(uuid())
+  userId               String   @unique
+  planId               String
+  status               String
+  currentPeriodStart   DateTime
+  currentPeriodEnd     DateTime
+  cancelAtPeriodEnd    Boolean  @default(false)
+  stripeSubscriptionId String   @unique
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Trip {
   id          String      @id @default(uuid())
   userId      String
-  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   destination String
   budget      Float
   startDate   DateTime
@@ -59,60 +58,60 @@ model Trip {
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
   dailyPlans  DailyPlan[]
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model DailyPlan {
   id              String           @id @default(uuid())
   tripId          String
-  trip            Trip             @relation(fields: [tripId], references: [id], onDelete: Cascade)
   date            DateTime
   estimatedCost   Float            @default(0)
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
   activities      Activity[]
+  trip            Trip             @relation(fields: [tripId], references: [id], onDelete: Cascade)
   meals           Meal[]
   transportations Transportation[]
 }
 
 model Activity {
-  id            String    @id @default(uuid())
-  dailyPlanId   String
-  dailyPlan     DailyPlan @relation(fields: [dailyPlanId], references: [id], onDelete: Cascade)
-  name          String
-  description   String?
-  latitude      Float
-  longitude     Float
-  duration      Int
-  cost          Float
-  category      String
-  openingHours  String?
-  rating        Float?
-  imageUrl      String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id           String    @id @default(uuid())
+  dailyPlanId  String
+  name         String
+  description  String?
+  latitude     Float
+  longitude    Float
+  duration     Int
+  cost         Float
+  category     String
+  openingHours String?
+  rating       Float?
+  imageUrl     String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  dailyPlan    DailyPlan @relation(fields: [dailyPlanId], references: [id], onDelete: Cascade)
 }
 
 model Meal {
-  id            String    @id @default(uuid())
-  dailyPlanId   String
-  dailyPlan     DailyPlan @relation(fields: [dailyPlanId], references: [id], onDelete: Cascade)
-  name          String
-  description   String?
-  latitude      Float
-  longitude     Float
-  mealType      String
-  cost          Float
-  cuisine       String?
-  rating        Float?
-  imageUrl      String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id          String    @id @default(uuid())
+  dailyPlanId String
+  name        String
+  description String?
+  latitude    Float
+  longitude   Float
+  mealType    String
+  cost        Float
+  cuisine     String?
+  rating      Float?
+  imageUrl    String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  dailyPlan   DailyPlan @relation(fields: [dailyPlanId], references: [id], onDelete: Cascade)
 }
 
 model Transportation {
   id            String    @id @default(uuid())
   dailyPlanId   String
-  dailyPlan     DailyPlan @relation(fields: [dailyPlanId], references: [id], onDelete: Cascade)
   fromLocation  String
   toLocation    String
   fromLatitude  Float
@@ -126,4 +125,5 @@ model Transportation {
   arrivalTime   DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+  dailyPlan     DailyPlan @relation(fields: [dailyPlanId], references: [id], onDelete: Cascade)
 }

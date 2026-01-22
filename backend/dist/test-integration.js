@@ -113,27 +113,27 @@ class IntegrationTester {
             return false;
         }
     }
-    async testItineraryGeneration() {
+    async testtripGeneration() {
         try {
             if (!this.tripId) {
-                this.addResult("Itinerary Generation", false, "No trip ID available");
+                this.addResult("trip Generation", false, "No trip ID available");
                 return false;
             }
             const response = await this.api.post(`/api/trips/${this.tripId}/generate`);
-            if (response.data.itinerary && response.data.itinerary.length > 0) {
-                this.addResult("Itinerary Generation", true, `Generated ${response.data.itinerary.length} days`, {
-                    days: response.data.itinerary.length,
-                    firstDay: response.data.itinerary[0],
+            if (response.data.trip && response.data.trip.length > 0) {
+                this.addResult("trip Generation", true, `Generated ${response.data.trip.length} days`, {
+                    days: response.data.trip.length,
+                    firstDay: response.data.trip[0],
                 });
                 return true;
             }
             else {
-                this.addResult("Itinerary Generation", false, "No itinerary generated");
+                this.addResult("trip Generation", false, "No trip generated");
                 return false;
             }
         }
         catch (error) {
-            this.addResult("Itinerary Generation", false, `Failed: ${error.response?.data?.error || error.message}`);
+            this.addResult("trip Generation", false, `Failed: ${error.response?.data?.error || error.message}`);
             return false;
         }
     }
@@ -203,8 +203,8 @@ class IntegrationTester {
         await this.testUserLogin();
         // Test 4: Trip Creation
         await this.testTripCreation();
-        // Test 5: Itinerary Generation
-        await this.testItineraryGeneration();
+        // Test 5: trip Generation
+        await this.testtripGeneration();
         // Test 6: Trip Retrieval
         await this.testTripRetrieval();
         // Test 7: Chat Assistant

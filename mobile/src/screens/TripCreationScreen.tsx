@@ -10,7 +10,9 @@ import {
   ActivityIndicator,
   SafeAreaView,
   StatusBar,
+  Platform,
 } from "react-native";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { tripService } from "../services/tripService";
 import { TravelPreferences } from "../types";
@@ -31,8 +33,19 @@ export default function TripCreationScreen({
   const [destination, setDestination] = useState(route?.params?.destination || "");
   const [budget, setBudget] = useState(1000);
   const [budgetInput, setBudgetInput] = useState("1000"); // Separate state for input text
+  
+  // Date states
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [startDateObj, setStartDateObj] = useState<Date>(new Date());
+  const [endDateObj, setEndDateObj] = useState<Date>(() => {
+    const date = new Date();
+    date.setDate(date.getDate() + 7); // Default to 7 days from now
+    return date;
+  });
+  const [showStartDatePicker, setShowStartDatePicker] = useState(false);
+  const [showEndDatePicker, setShowEndDatePicker] = useState(false);
+  
   const [loading, setLoading] = useState(false);
 
   // Preferences
@@ -66,6 +79,16 @@ export default function TripCreationScreen({
     { id: "rental", label: "Rental", icon: "🚗" },
   ];
 
+  // Initialize date strings from date objects
+  useEffect(() => {
+    if (!startDate) {
+      setStartDate(formatDateToString(startDateObj));
+    }
+    if (!endDate) {
+      setEndDate(formatDateToString(endDateObj));
+    }
+  }, []);
+
   const toggleSelection = (
     item: string,
     list: string[],
@@ -75,6 +98,62 @@ export default function TripCreationScreen({
       setter(list.filter((i) => i !== item));
     } else {
       setter([...list, item]);
+    }
+  };
+
+  // Format date to YYYY-MM-DD string
+  const formatDateToString = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
+  // Format date for display (e.g., "Dec 25, 2026")
+  const formatDateForDisplay = (date: Date): string => {
+    return date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  };
+
+  // Handle start date picker
+  const handleStartDateChange = (event: any, selectedDate?: Date) => {
+    if (Platform.OS === "android") {
+      setShowStartDatePicker(false);
+    }
+    if (selectedDate) {
+      setStartDateObj(selectedDate);
+      setStartDate(formatDateToString(selectedDate));
+      // If end date is before or equal to new start date, update end date
+      if (endDateObj <= selectedDate) {
+        const newEndDate = new Date(selectedDate);
+        newEndDate.setDate(newEndDate.getDate() + 1);
+        setEndDateObj(newEndDate);
+        setEndDate(formatDateToString(newEndDate));
+      }
+    }
+    if (Platform.OS === "ios") {
+      if (event.type === "dismissed") {
+        setShowStartDatePicker(false);
+      }
+    }
+  };
+
+  // Handle end date picker
+  const handleEndDateChange = (event: any, selectedDate?: Date) => {
+    if (Platform.OS === "android") {
+      setShowEndDatePicker(false);
+    }
+    if (selectedDate) {
+      setEndDateObj(selectedDate);
+      setEndDate(formatDateToString(selectedDate));
+    }
+    if (Platform.OS === "ios") {
+      if (event.type === "dismissed") {
+        setShowEndDatePicker(false);
+      }
     }
   };
 
@@ -125,24 +204,17 @@ export default function TripCreationScreen({
       return false;
     }
 
-    // Try to parse dates - support multiple formats
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    
-    if (isNaN(start.getTime())) {
-      Alert.alert("Validation Error", `Invalid start date: "${startDate}"\n\nPlease use format: YYYY-MM-DD\nExample: 2026-12-25`);
-      return false;
-    }
-    
-    if (isNaN(end.getTime())) {
-      Alert.alert("Validation Error", `Invalid end date: "${endDate}"\n\nPlease use format: YYYY-MM-DD\nExample: 2026-12-31`);
-      return false;
-    }
+    // Use the date objects directly for validation
+    const start = startDateObj;
+    const end = endDateObj;
     
     // Check if start date is in the past
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    if (start < today) {
+    const startDateOnly = new Date(start);
+    startDateOnly.setHours(0, 0, 0, 0);
+    
+    if (startDateOnly < today) {
       Alert.alert("Validation Error", "Start date cannot be in the past");
       return false;
     }
@@ -182,7 +254,7 @@ export default function TripCreationScreen({
 
       Alert.alert(
         "Success! ✨",
-        "Your trip is being generated! The itinerary will be ready shortly. You can view it in your trips list.",
+        "Your trip is being generated! The trip will be ready shortly. You can view it in your trips list.",
         [
           {
             text: "View Trip",
@@ -322,26 +394,76 @@ export default function TripCreationScreen({
             <View style={styles.dateRow}>
               <View style={styles.dateInput}>
                 <Text style={styles.dateLabel}>Start Date</Text>
-                <TextInput
+                <TouchableOpacity
                   style={styles.dateField}
-                  placeholder="2026-12-25"
-                  placeholderTextColor={colors.textLight}
-                  value={startDate}
-                  onChangeText={setStartDate}
-                  keyboardType="numbers-and-punctuation"
-                />
+                  onPress={() => setShowStartDatePicker(true)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[
+                    styles.dateFieldText,
+                    !startDate && { color: colors.textLight }
+                  ]}>
+                    {startDate ? formatDateForDisplay(startDateObj) : "Select start date"}
+                  </Text>
+                </TouchableOpacity>
+                {showStartDatePicker && (
+                  <>
+                    <DateTimePicker
+                      value={startDateObj}
+                      mode="date"
+                      display={Platform.OS === "ios" ? "spinner" : "default"}
+                      onChange={handleStartDateChange}
+                      minimumDate={new Date()}
+                    />
+                    {Platform.OS === "ios" && (
+                      <View style={styles.iosPickerActions}>
+                        <TouchableOpacity
+                          style={styles.iosPickerButton}
+                          onPress={() => setShowStartDatePicker(false)}
+                        >
+                          <Text style={styles.iosPickerButtonText}>Done</Text>
+                        </TouchableOpacity>
+                      </View>
+                    )}
+                  </>
+                )}
               </View>
               <Text style={styles.dateSeparator}>→</Text>
               <View style={styles.dateInput}>
                 <Text style={styles.dateLabel}>End Date</Text>
-                <TextInput
+                <TouchableOpacity
                   style={styles.dateField}
-                  placeholder="2026-12-31"
-                  placeholderTextColor={colors.textLight}
-                  value={endDate}
-                  onChangeText={setEndDate}
-                  keyboardType="numbers-and-punctuation"
-                />
+                  onPress={() => setShowEndDatePicker(true)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[
+                    styles.dateFieldText,
+                    !endDate && { color: colors.textLight }
+                  ]}>
+                    {endDate ? formatDateForDisplay(endDateObj) : "Select end date"}
+                  </Text>
+                </TouchableOpacity>
+                {showEndDatePicker && (
+                  <>
+                    <DateTimePicker
+                      value={endDateObj}
+                      mode="date"
+                      display={Platform.OS === "ios" ? "spinner" : "default"}
+                      onChange={handleEndDateChange}
+                      minimumDate={startDateObj || new Date()}
+                    />
+                    {Platform.OS === "ios" && (
+                      <View style={styles.iosPickerActions}>
+                        <TouchableOpacity
+                          style={styles.iosPickerButton}
+                          onPress={() => setShowEndDatePicker(false)}
+                        >
+                          <Text style={styles.iosPickerButtonText}>Done</Text>
+                        </TouchableOpacity>
+                      </View>
+                    )}
+                  </>
+                )}
               </View>
             </View>
           </View>
@@ -601,12 +723,34 @@ const createStyles = (colors: any) => StyleSheet.create({
   },
   dateField: {
     ...typography.body2,
-    color: colors.textPrimary,
     backgroundColor: colors.gray50,
     borderRadius: borderRadius.md,
     padding: spacing.sm,
     borderWidth: 1,
     borderColor: colors.gray200,
+    justifyContent: 'center',
+    minHeight: 44,
+  },
+  dateFieldText: {
+    ...typography.body2,
+    color: colors.textPrimary,
+  },
+  iosPickerActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    paddingTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.gray200,
+    marginTop: spacing.xs,
+  },
+  iosPickerButton: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  iosPickerButtonText: {
+    ...typography.button,
+    color: colors.primary,
+    fontWeight: '600',
   },
   dateSeparator: {
     ...typography.h3,

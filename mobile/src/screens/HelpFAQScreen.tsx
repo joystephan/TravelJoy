@@ -19,17 +19,17 @@ const FAQ_ITEMS = [
   {
     question: "How do I create a trip?",
     answer:
-      "Tap the 'Create Trip' button on the Explore screen, enter your destination, dates, and preferences. Our AI will generate a personalized itinerary for you.",
+      "Tap the 'Create Trip' button on the Explore screen, enter your destination, dates, and preferences. Our AI will generate a personalized trip for you.",
   },
   {
-    question: "Can I edit my trip itinerary?",
+    question: "Can I edit my trip trip?",
     answer:
-      "Yes! Open your trip from 'My Trips', tap on any activity, and you can edit or delete it. You can also add new activities to your itinerary.",
+      "Yes! Open your trip from 'My Trips', tap on any activity, and you can edit or delete it. You can also add new activities to your trip.",
   },
   {
     question: "How does the AI trip planning work?",
     answer:
-      "Our AI analyzes your travel preferences, destination, and dates to create a customized itinerary with activities, restaurants, and attractions that match your interests.",
+      "Our AI analyzes your travel preferences, destination, and dates to create a customized trip with activities, restaurants, and attractions that match your interests.",
   },
   {
     question: "Can I save multiple trips?",

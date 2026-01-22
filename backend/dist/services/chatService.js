@@ -127,7 +127,7 @@ class ChatService {
         const actionMessages = {
             weather: "What is the weather forecast for my trip?",
             budget: "Show me a breakdown of my trip budget",
-            optimize: "Can you optimize my itinerary to save money?",
+            optimize: "Can you optimize my trip to save money?",
             restaurants: "Suggest some good restaurants near my activities",
             activities: "What are some alternative activities I can do?",
             transport: "What are the best transportation options?",
