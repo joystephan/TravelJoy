@@ -101,16 +101,22 @@ apiClient.interceptors.response.use(
                                  originalRequest?.url?.includes("/hotels");
       const is404 = error.response.status === 404;
       const is401 = error.response.status === 401; // Authentication errors
+      const is400 = error.response.status === 400; // Client errors (validation, registration, etc.)
       
       if (isOptionalEndpoint && is404) {
         // Silently handle 404s for optional endpoints - they're expected
         // The calling service will handle the fallback
-      } else if (is401) {
-        // For 401 errors (authentication failures), log minimal info
+      } else if (is401 || is400) {
+        // For 401/400 errors (authentication/validation failures), log minimal info
         // The user-facing error message is handled by the calling component
-        console.warn("Authentication failed:", originalRequest?.url);
+        // Use console.warn instead of console.error to avoid triggering error overlays
+        console.warn("Request failed:", {
+          status: error.response.status,
+          url: originalRequest?.url,
+          message: error.response.data?.error?.message || "Client error"
+        });
       } else {
-        // Server responded with error status
+        // Server responded with error status (5xx errors)
         console.error("=== API ERROR (Server Response) ===");
         console.error("Status:", error.response.status);
         console.error("Status Text:", error.response.statusText);

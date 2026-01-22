@@ -19,6 +19,7 @@ import { TravelPreferences } from "../types";
 import { spacing, borderRadius, shadows, typography } from "../theme";
 import { useTheme } from "../contexts/ThemeContext";
 import CategoryChip from "../components/CategoryChip";
+import DestinationSearchInput from "../components/DestinationSearchInput";
 
 interface TripCreationScreenProps {
   navigation: any;
@@ -157,44 +158,12 @@ export default function TripCreationScreen({
     }
   };
 
-  const validateDestination = async (): Promise<boolean> => {
+  const validateForm = () => {
+    // Validate destination (must be selected from the list)
     if (!destination.trim()) {
-      Alert.alert("Validation Error", "Please enter a destination");
+      Alert.alert("Validation Error", "Please select a destination from the list");
       return false;
     }
-
-    try {
-      // Call Nominatim API to validate destination
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(destination)}&format=json&limit=1`,
-        {
-          headers: {
-            'User-Agent': 'TravelJoy Mobile App',
-          },
-        }
-      );
-
-      const data = await response.json();
-
-      if (!data || data.length === 0) {
-        Alert.alert(
-          "Invalid Destination",
-          `"${destination}" is not a recognized location.\n\nPlease enter a valid city, country, or landmark.\n\nExamples:\n• Paris, France\n• Tokyo, Japan\n• New York, USA`
-        );
-        return false;
-      }
-
-      console.log('Destination validated:', data[0].display_name);
-      return true;
-    } catch (error) {
-      console.error('Destination validation error:', error);
-      // If validation fails due to network, allow it to proceed
-      // The backend will do its own validation
-      return true;
-    }
-  };
-
-  const validateForm = () => {
     if (budget < 100) {
       Alert.alert("Validation Error", "Budget must be at least $100");
       return false;
@@ -228,11 +197,7 @@ export default function TripCreationScreen({
   };
 
   const handleCreateTrip = async () => {
-    // Validate destination first
-    const isDestinationValid = await validateDestination();
-    if (!isDestinationValid) return;
-
-    // Then validate other fields
+    // Validate all fields
     if (!validateForm()) return;
 
     setLoading(true);
@@ -304,15 +269,12 @@ export default function TripCreationScreen({
           </View>
 
           {/* Destination Input */}
-          <View style={styles.card}>
+          <View style={styles.card} collapsable={false}>
             <Text style={styles.cardLabel}>📍 Where to?</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="e.g., Paris, France"
-              placeholderTextColor={colors.textLight}
+            <DestinationSearchInput
               value={destination}
-              onChangeText={setDestination}
-              autoCapitalize="words"
+              onChange={setDestination}
+              placeholder="Search for a destination"
             />
           </View>
 
@@ -414,6 +376,8 @@ export default function TripCreationScreen({
                       display={Platform.OS === "ios" ? "spinner" : "default"}
                       onChange={handleStartDateChange}
                       minimumDate={new Date()}
+                      accentColor={colors.primary}
+                      textColor={Platform.OS === "ios" ? colors.textPrimary : undefined}
                     />
                     {Platform.OS === "ios" && (
                       <View style={styles.iosPickerActions}>
@@ -451,6 +415,8 @@ export default function TripCreationScreen({
                       display={Platform.OS === "ios" ? "spinner" : "default"}
                       onChange={handleEndDateChange}
                       minimumDate={startDateObj || new Date()}
+                      accentColor={colors.primary}
+                      textColor={Platform.OS === "ios" ? colors.textPrimary : undefined}
                     />
                     {Platform.OS === "ios" && (
                       <View style={styles.iosPickerActions}>

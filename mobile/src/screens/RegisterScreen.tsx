@@ -15,6 +15,7 @@ import {
 } from "react-native";
 import { useAuth } from "../contexts/AuthContext";
 import { colors, spacing, borderRadius, shadows, typography } from "../theme";
+import { parseAPIError, getUserFriendlyMessage } from "../utils/apiErrorHandler";
 
 interface RegisterScreenProps {
   navigation: any;
@@ -94,32 +95,12 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
       // and RootNavigator will switch to AppNavigator
       Alert.alert("Success!", "Account created successfully!");
     } catch (error: any) {
-      // Detailed error logging
-      console.error("=== REGISTRATION ERROR ===");
-      console.error("Error Type:", error?.constructor?.name);
-      console.error("Error Message:", error?.message);
+      // Use the API error handler to parse the error properly
+      const apiError = parseAPIError(error);
+      const errorMessage = getUserFriendlyMessage(apiError);
       
-      if (error.response) {
-        console.error("Response Status:", error.response.status);
-        console.error("Response Data:", JSON.stringify(error.response.data, null, 2));
-        console.error("Response Headers:", JSON.stringify(error.response.headers, null, 2));
-      } else if (error.request) {
-        console.error("Request made but no response:", error.request);
-      }
-      
-      console.error("Full Error Object:", JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
-      console.error("=========================");
-      
-      // Show user-friendly error message
-      const errorMessage = 
-        error.response?.data?.error?.message || 
-        error.message || 
-        "Unable to create account. Please try again.";
-      
-      Alert.alert(
-        "Registration Failed",
-        errorMessage
-      );
+      // Show user-friendly alert
+      Alert.alert("Registration Failed", errorMessage);
     } finally {
       setLoading(false);
     }

@@ -49,7 +49,9 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "plugins": [],
+    "plugins": [
+      "./plugins/withAndroidDatePickerColor.js"
+    ],
     "extra": {
       "eas": {
         "projectId": "your-project-id-here"

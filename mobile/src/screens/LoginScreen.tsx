@@ -14,6 +14,7 @@ import {
 } from "react-native";
 import { useAuth } from "../contexts/AuthContext";
 import { colors, spacing, borderRadius, shadows, typography } from "../theme";
+import { parseAPIError, getUserFriendlyMessage } from "../utils/apiErrorHandler";
 
 interface LoginScreenProps {
   navigation: any;
@@ -41,17 +42,11 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
       // No need to manually navigate - the AuthContext will trigger a re-render
       // and RootNavigator will switch to AppNavigator
     } catch (error: any) {
-      // Extract user-friendly error message
-      let errorMessage = "Invalid email or password. Please try again.";
+      // Use the API error handler to parse the error properly
+      const apiError = parseAPIError(error);
+      const errorMessage = getUserFriendlyMessage(apiError);
       
-      if (error?.response?.data?.error?.message) {
-        errorMessage = error.response.data.error.message;
-      } else if (error?.message && !error.message.includes("Request failed")) {
-        // Only use error.message if it's not a technical error message
-        errorMessage = error.message;
-      }
-      
-      // Show user-friendly alert (not raw error objects)
+      // Show user-friendly alert
       Alert.alert("Login Failed", errorMessage);
     } finally {
       setLoading(false);

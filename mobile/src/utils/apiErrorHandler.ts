@@ -45,18 +45,25 @@ export function getUserFriendlyMessage(error: APIError): string {
   const errorMessages: Record<string, string> = {
     NETWORK_ERROR:
       "Unable to connect. Please check your internet connection and try again.",
-    AUTH_ERROR: "Authentication failed. Please log in again.",
+    AUTH_ERROR: "Invalid email or password. Please try again.",
+    AUTHENTICATION_FAILED: "Invalid email or password. Please try again.",
     FORBIDDEN: "You don't have permission to perform this action.",
     NOT_FOUND: "The requested resource was not found.",
     VALIDATION_ERROR: "Please check your input and try again.",
     RATE_LIMIT_EXCEEDED:
       "Too many requests. Please wait a moment and try again.",
     EXTERNAL_API_ERROR: "Unable to fetch travel data. Please try again later.",
+    REGISTRATION_FAILED: "Registration failed. Please try again.",
   };
 
+  // If we have a specific error message from the API, use it
+  if (error.message && error.message !== "An error occurred") {
+    return error.message;
+  }
+
+  // Otherwise use the code-based message
   return (
     errorMessages[error.code] ||
-    error.message ||
     "Something went wrong. Please try again."
   );
 }

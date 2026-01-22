@@ -10,3 +10,4 @@ export { default as DestinationCard } from "./DestinationCard";
 export { default as HotelCard } from "./HotelCard";
 export { default as SearchBar } from "./SearchBar";
 export { default as CategoryChip } from "./CategoryChip";
+export { default as DestinationSearchInput } from "./DestinationSearchInput";
