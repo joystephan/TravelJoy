@@ -11,7 +11,7 @@
 ---
 
 ## 📋 Table of Contents
-
+- [📼 Demo](#-demo) - Walkthrough the app user journey 
 - [🚀 How to Run the App](#-how-to-run-the-app) - Complete setup and running instructions
 - [🔄 How to Update the App](#-how-to-update-the-app) - Update dependencies and code
 - [⚙️ Environment Configuration](#️-environment-configuration) - API keys and settings
@@ -23,6 +23,11 @@
 - [📚 Additional Documentation](#-additional-documentation) - More resources
 
 ---
+
+## 📼 Demo
+
+
+
 
 ## 🚀 How to Run the App
 
