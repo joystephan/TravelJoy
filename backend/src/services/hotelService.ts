@@ -1,6 +1,11 @@
 import axios from "axios";
 import nominatimService from "./nominatimService";
-import redisClient from "../config/redis";
+import { cacheHelper } from "../utils/cacheHelper";
+import {
+  generateHotelPrice,
+  generateHotelRating,
+  extractStarRating,
+} from "../utils/pricingHelper";
 
 interface Coordinates {
   lat: number;
@@ -86,10 +91,13 @@ class HotelService {
           location: { latitude: lat, longitude: lon },
           city: place?.address?.city || place?.address?.state || location,
           country: place?.address?.country || "",
-          rating: this.extractRating(element.tags),
-          price: this.estimatePrice(element.tags, place?.address?.country),
+          rating: generateHotelRating(element.tags?.name || "Hotel"),
+          price: generateHotelPrice(
+            place?.address?.country,
+            element.tags?.name || "Hotel"
+          ),
           imageUrl: this.getHotelImageUrl(lat, lon, element.tags?.name),
-          stars: this.extractStars(element.tags),
+          stars: extractStarRating(element.tags),
           website: element.tags?.website,
           phone: element.tags?.phone,
           description: element.tags?.description || element.tags?.tourism,
@@ -189,8 +197,8 @@ class HotelService {
         },
         city: place.address?.city || place.address?.town || place.address?.state || location,
         country: place.address?.country || "",
-        rating: this.generateRealisticRating(place.name, place.address?.country),
-        price: this.generateRealisticPrice(place.address?.country),
+        rating: generateHotelRating(place.name),
+        price: generateHotelPrice(place.address?.country, place.name),
         imageUrl: this.getHotelImageUrl(
           place.coordinates.lat,
           place.coordinates.lon,
@@ -202,123 +210,6 @@ class HotelService {
     }
 
     return hotels;
-  }
-
-  /**
-   * Extract hotel rating from OSM tags
-   */
-  private extractRating(tags: any): number {
-    // Try to get rating from OSM tags
-    if (tags?.rating) {
-      const rating = parseFloat(tags.rating);
-      if (!isNaN(rating) && rating >= 0 && rating <= 5) {
-        return rating;
-      }
-    }
-
-    // Generate realistic rating based on hotel name/type
-    const name = (tags?.name || "").toLowerCase();
-    let baseRating = 3.5;
-
-    if (name.includes("resort") || name.includes("spa")) {
-      baseRating = 4.2;
-    } else if (name.includes("luxury") || name.includes("premium")) {
-      baseRating = 4.5;
-    } else if (name.includes("budget") || name.includes("hostel")) {
-      baseRating = 3.2;
-    }
-
-    // Add some variation
-    return Math.round((baseRating + (Math.random() * 0.6 - 0.3)) * 10) / 10;
-  }
-
-  /**
-   * Extract star rating from OSM tags
-   */
-  private extractStars(tags: any): number | undefined {
-    if (tags?.stars) {
-      const stars = parseInt(tags.stars);
-      if (!isNaN(stars) && stars >= 1 && stars <= 5) {
-        return stars;
-      }
-    }
-    return undefined;
-  }
-
-  /**
-   * Estimate price based on location and hotel type
-   */
-  private estimatePrice(tags: any, country?: string): number {
-    const name = (tags?.name || "").toLowerCase();
-    let basePrice = 100;
-
-    // Adjust based on country (cost of living)
-    if (country) {
-      const expensiveCountries = ["Switzerland", "Norway", "Iceland", "Denmark"];
-      const moderateCountries = ["USA", "UK", "France", "Germany", "Japan"];
-      const affordableCountries = ["Thailand", "Vietnam", "India", "Mexico"];
-
-      if (expensiveCountries.includes(country)) {
-        basePrice = 200;
-      } else if (moderateCountries.includes(country)) {
-        basePrice = 120;
-      } else if (affordableCountries.includes(country)) {
-        basePrice = 40;
-      }
-    }
-
-    // Adjust based on hotel type
-    if (name.includes("resort") || name.includes("spa") || name.includes("luxury")) {
-      basePrice *= 1.8;
-    } else if (name.includes("budget") || name.includes("hostel")) {
-      basePrice *= 0.5;
-    }
-
-    // Add variation
-    const variation = basePrice * 0.3;
-    return Math.floor(basePrice + (Math.random() * variation * 2 - variation));
-  }
-
-  /**
-   * Generate realistic rating
-   */
-  private generateRealisticRating(name: string, country?: string): number {
-    const nameLower = name.toLowerCase();
-    let baseRating = 3.8;
-
-    if (nameLower.includes("resort") || nameLower.includes("spa")) {
-      baseRating = 4.3;
-    } else if (nameLower.includes("luxury") || nameLower.includes("premium")) {
-      baseRating = 4.6;
-    } else if (nameLower.includes("budget") || nameLower.includes("hostel")) {
-      baseRating = 3.4;
-    }
-
-    return Math.round((baseRating + (Math.random() * 0.5 - 0.25)) * 10) / 10;
-  }
-
-  /**
-   * Generate realistic price
-   */
-  private generateRealisticPrice(country?: string): number {
-    let basePrice = 100;
-
-    if (country) {
-      const expensiveCountries = ["Switzerland", "Norway", "Iceland", "Denmark"];
-      const moderateCountries = ["USA", "UK", "France", "Germany", "Japan"];
-      const affordableCountries = ["Thailand", "Vietnam", "India", "Mexico"];
-
-      if (expensiveCountries.includes(country)) {
-        basePrice = 220;
-      } else if (moderateCountries.includes(country)) {
-        basePrice = 130;
-      } else if (affordableCountries.includes(country)) {
-        basePrice = 45;
-      }
-    }
-
-    const variation = basePrice * 0.3;
-    return Math.floor(basePrice + (Math.random() * variation * 2 - variation));
   }
 
   /**
@@ -382,13 +273,9 @@ class HotelService {
     const cacheKey = `hotels:search:${location}:${options?.limit || 20}`;
 
     // Check cache
-    try {
-      const cached = await redisClient.get(cacheKey);
-      if (cached) {
-        return JSON.parse(cached);
-      }
-    } catch (error) {
-      console.error("Cache get error:", error);
+    const cached = await cacheHelper.get<HotelData[]>(cacheKey);
+    if (cached) {
+      return cached;
     }
 
     try {
@@ -408,16 +295,7 @@ class HotelService {
       }
 
       // Cache the results
-      try {
-        await redisClient.set(
-          cacheKey,
-          JSON.stringify(hotels),
-          "EX",
-          this.cacheExpiry
-        );
-      } catch (error) {
-        console.error("Cache set error:", error);
-      }
+      await cacheHelper.set(cacheKey, hotels, this.cacheExpiry);
 
       return hotels;
     } catch (error) {

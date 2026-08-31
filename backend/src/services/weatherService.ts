@@ -1,5 +1,5 @@
 import axios from "axios";
-import redisClient from "../config/redis";
+import { cacheHelper } from "../utils/cacheHelper";
 
 interface Coordinates {
   lat: number;
@@ -75,7 +75,7 @@ class WeatherService {
     const cacheKey = `weather:current:${coordinates.lat}:${coordinates.lon}`;
 
     // Check cache first
-    const cached = await this.getFromCache(cacheKey);
+    const cached = await cacheHelper.get<CurrentWeather>(cacheKey);
     if (cached) {
       return cached;
     }
@@ -93,7 +93,7 @@ class WeatherService {
       const weather = this.mapOpenMeteoCurrentWeather(response.data);
 
       // Cache the result
-      await this.saveToCache(cacheKey, weather);
+      await cacheHelper.set(cacheKey, weather, this.cacheExpiry);
 
       return weather;
     } catch (error) {
@@ -112,7 +112,7 @@ class WeatherService {
     const cacheKey = `weather:forecast:${coordinates.lat}:${coordinates.lon}:${days}`;
 
     // Check cache first
-    const cached = await this.getFromCache(cacheKey);
+    const cached = await cacheHelper.get<ForecastDay[]>(cacheKey);
     if (cached) {
       return cached;
     }
@@ -131,7 +131,7 @@ class WeatherService {
       const forecast = this.mapOpenMeteoForecast(response.data);
 
       // Cache the result
-      await this.saveToCache(cacheKey, forecast);
+      await cacheHelper.set(cacheKey, forecast, this.cacheExpiry);
 
       return forecast;
     } catch (error) {
@@ -401,28 +401,6 @@ class WeatherService {
       99: "Thunderstorm with heavy hail",
     };
     return weatherCodes[code] || "Unknown";
-  }
-
-
-  /**
-   * Cache helper methods
-   */
-  private async getFromCache(key: string): Promise<any | null> {
-    try {
-      const cached = await redisClient.get(key);
-      return cached ? JSON.parse(cached) : null;
-    } catch (error) {
-      console.error("Cache get error:", error);
-      return null;
-    }
-  }
-
-  private async saveToCache(key: string, data: any): Promise<void> {
-    try {
-      await redisClient.set(key, JSON.stringify(data), "EX", this.cacheExpiry);
-    } catch (error) {
-      console.error("Cache save error:", error);
-    }
   }
 }
 

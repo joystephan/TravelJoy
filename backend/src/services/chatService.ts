@@ -1,6 +1,7 @@
 import { aiService, ChatContext, ChatResponse } from "./aiService";
 import { tripService } from "./tripService";
 import prisma from "../config/database";
+import { saveDailyPlans, deleteDailyPlans } from "../utils/databaseHelper";
 
 export interface ChatMessage {
   role: "user" | "assistant";
@@ -123,12 +124,10 @@ class ChatService {
     if (response.action === "update_plan" && response.updatedPlan && tripId) {
       try {
         // Delete existing daily plans
-        await prisma.dailyPlan.deleteMany({
-          where: { tripId },
-        });
+        await deleteDailyPlans(tripId);
 
         // Save updated plans
-        await this.saveDailyPlans(tripId, response.updatedPlan);
+        await saveDailyPlans(tripId, response.updatedPlan);
       } catch (error) {
         console.error("Failed to save updated plan:", error);
       }
@@ -177,70 +176,6 @@ class ChatService {
   clearChatHistory(userId: string, tripId?: string): void {
     const sessionKey = tripId ? `${userId}:${tripId}` : userId;
     this.sessions.delete(sessionKey);
-  }
-
-  /**
-   * Save daily plans to database (helper method)
-   */
-  private async saveDailyPlans(tripId: string, dailyPlans: any[]) {
-    for (const plan of dailyPlans) {
-      const dailyPlan = await prisma.dailyPlan.create({
-        data: {
-          tripId,
-          date: plan.date,
-          estimatedCost: plan.estimatedCost,
-        },
-      });
-
-      // Save activities
-      if (plan.activities && plan.activities.length > 0) {
-        await prisma.activity.createMany({
-          data: plan.activities.map((activity: any) => ({
-            dailyPlanId: dailyPlan.id,
-            name: activity.name,
-            description: activity.description,
-            latitude: activity.location.lat,
-            longitude: activity.location.lon,
-            duration: activity.duration,
-            cost: activity.cost,
-            category: activity.category,
-          })),
-        });
-      }
-
-      // Save meals
-      if (plan.meals && plan.meals.length > 0) {
-        await prisma.meal.createMany({
-          data: plan.meals.map((meal: any) => ({
-            dailyPlanId: dailyPlan.id,
-            name: meal.name,
-            latitude: meal.location.lat,
-            longitude: meal.location.lon,
-            mealType: meal.type,
-            cost: meal.cost,
-            cuisine: meal.cuisine,
-          })),
-        });
-      }
-
-      // Save transportation
-      if (plan.transportation && plan.transportation.length > 0) {
-        await prisma.transportation.createMany({
-          data: plan.transportation.map((transport: any) => ({
-            dailyPlanId: dailyPlan.id,
-            fromLocation: transport.from,
-            toLocation: transport.to,
-            fromLatitude: 0,
-            fromLongitude: 0,
-            toLatitude: 0,
-            toLongitude: 0,
-            mode: transport.type,
-            duration: transport.duration,
-            cost: transport.cost,
-          })),
-        });
-      }
-    }
   }
 
   /**

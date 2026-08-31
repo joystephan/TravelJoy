@@ -4,5 +4,8 @@ node_modules
 
 /src/generated/prisma
 
+# Compiled output
+dist/
+
 # This is a yarn-only project - ignore npm lock files
 package-lock.json

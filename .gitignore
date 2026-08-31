@@ -1,0 +1,32 @@
+# TravelJoy Root .gitignore
+# This file prevents package manager conflicts across the entire project
+
+# NPM lock files (this is a yarn-only project)
+package-lock.json
+
+# Environment files (use .env.example as template)
+.env
+.env.local
+.env.*.local
+
+# OS files
+.DS_Store
+*.swp
+*.swo
+*~
+
+# IDE files
+.vscode/
+.idea/
+*.sublime-*
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Temporary files
+*.tmp
+.cache/
+

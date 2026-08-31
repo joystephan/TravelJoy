@@ -3,6 +3,9 @@
 # dependencies
 node_modules/
 
+# This is a yarn-only project - ignore npm lock files
+package-lock.json
+
 # Expo
 .expo/
 dist/

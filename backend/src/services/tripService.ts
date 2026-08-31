@@ -2,6 +2,7 @@ import { aiService, ItineraryGenerationParams, DailyPlan } from "./aiService";
 import weatherService from "./weatherService";
 import nominatimService from "./nominatimService";
 import prisma from "../config/database";
+import { saveDailyPlans, deleteDailyPlans } from "../utils/databaseHelper";
 
 export interface TripInput {
   userId: string;
@@ -119,7 +120,7 @@ class TripService {
       const dailyPlans = await aiService.generateItinerary(aiParams);
 
       // Save itinerary to database
-      await this.saveDailyPlans(tripId, dailyPlans);
+      await saveDailyPlans(tripId, dailyPlans);
 
       // Update trip status
       await prisma.trip.update({
@@ -135,70 +136,6 @@ class TripService {
         data: { status: "failed" },
       });
       throw error;
-    }
-  }
-
-  /**
-   * Save daily plans to database
-   */
-  private async saveDailyPlans(tripId: string, dailyPlans: DailyPlan[]) {
-    for (const plan of dailyPlans) {
-      const dailyPlan = await prisma.dailyPlan.create({
-        data: {
-          tripId,
-          date: plan.date,
-          estimatedCost: plan.estimatedCost,
-        },
-      });
-
-      // Save activities
-      if (plan.activities && plan.activities.length > 0) {
-        await prisma.activity.createMany({
-          data: plan.activities.map((activity) => ({
-            dailyPlanId: dailyPlan.id,
-            name: activity.name,
-            description: activity.description,
-            latitude: activity.location.lat,
-            longitude: activity.location.lon,
-            duration: activity.duration,
-            cost: activity.cost,
-            category: activity.category,
-          })),
-        });
-      }
-
-      // Save meals
-      if (plan.meals && plan.meals.length > 0) {
-        await prisma.meal.createMany({
-          data: plan.meals.map((meal) => ({
-            dailyPlanId: dailyPlan.id,
-            name: meal.name,
-            latitude: meal.location.lat,
-            longitude: meal.location.lon,
-            mealType: meal.type,
-            cost: meal.cost,
-            cuisine: meal.cuisine,
-          })),
-        });
-      }
-
-      // Save transportation
-      if (plan.transportation && plan.transportation.length > 0) {
-        await prisma.transportation.createMany({
-          data: plan.transportation.map((transport) => ({
-            dailyPlanId: dailyPlan.id,
-            fromLocation: transport.from,
-            toLocation: transport.to,
-            fromLatitude: transport.fromLocation?.lat || 0,
-            fromLongitude: transport.fromLocation?.lon || 0,
-            toLatitude: transport.toLocation?.lat || 0,
-            toLongitude: transport.toLocation?.lon || 0,
-            mode: transport.type,
-            duration: transport.duration,
-            cost: transport.cost,
-          })),
-        });
-      }
     }
   }
 
@@ -288,9 +225,7 @@ class TripService {
 
     // Delete old daily plans and their related data (cascade delete will handle related records)
     try {
-      await prisma.dailyPlan.deleteMany({
-        where: { tripId: trip.id },
-      });
+      await deleteDailyPlans(trip.id);
     } catch (error) {
       console.error(`Failed to delete old daily plans:`, error);
       throw new Error(`Failed to regenerate: Could not delete old plans`);
@@ -298,7 +233,7 @@ class TripService {
 
     // Save new daily plans
     try {
-      await this.saveDailyPlans(trip.id, dailyPlans);
+      await saveDailyPlans(trip.id, dailyPlans);
       console.log(`Successfully regenerated itinerary for trip ${trip.id} with ${dailyPlans.length} days`);
     } catch (error) {
       console.error(`Failed to save new daily plans:`, error);
@@ -522,12 +457,10 @@ class TripService {
     });
 
     // Delete existing daily plans
-    await prisma.dailyPlan.deleteMany({
-      where: { tripId },
-    });
+    await deleteDailyPlans(tripId);
 
     // Save optimized plans
-    await this.saveDailyPlans(tripId, optimizedPlans);
+    await saveDailyPlans(tripId, optimizedPlans);
 
     // Update trip budget if provided
     if (constraints.budget) {

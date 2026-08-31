@@ -16,7 +16,7 @@ if [ ! -f "package.json" ]; then
 fi
 
 echo "📦 Installing dependencies..."
-npm install
+yarn install
 
 echo ""
 echo "✅ Setup complete!"
@@ -34,23 +34,23 @@ case $choice in
     1)
         echo ""
         echo "🍎 Starting iOS Simulator..."
-        npm run ios
+        yarn ios
         ;;
     2)
         echo ""
         echo "🤖 Starting Android Emulator..."
-        npm run android
+        yarn android
         ;;
     3)
         echo ""
         echo "📱 Starting Expo Dev Server..."
         echo "Scan the QR code with Expo Go app on your phone"
-        npm start
+        yarn start
         ;;
     4)
         echo ""
         echo "🌐 Starting Web Browser..."
-        npm run web
+        yarn web
         ;;
     *)
         echo ""

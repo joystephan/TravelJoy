@@ -1,5 +1,11 @@
 import { Request, Response } from "express";
 import { tripService } from "../services/tripService";
+import {
+  validateRequiredFields,
+  validateDateRange,
+  validatePositiveNumber,
+  sendErrorResponse,
+} from "../utils/validation";
 
 export class TripController {
   /**
@@ -10,57 +16,32 @@ export class TripController {
       const userId = (req as any).user?.id || (req as any).user?.userId;
       
       if (!userId) {
-        return res.status(401).json({
-          error: {
-            code: "UNAUTHORIZED",
-            message: "User ID not found in authentication token",
-          },
-        });
+        return sendErrorResponse(
+          res,
+          401,
+          "UNAUTHORIZED",
+          "User ID not found in authentication token"
+        );
       }
 
       const { destination, budget, startDate, endDate, preferences } = req.body;
 
       // Validate required fields
-      if (!destination || !budget || !startDate || !endDate) {
-        return res.status(400).json({
-          error: {
-            code: "VALIDATION_ERROR",
-            message:
-              "Missing required fields: destination, budget, startDate, endDate",
-          },
-        });
+      if (!validateRequiredFields(res, { destination, budget, startDate, endDate })) {
+        return;
       }
 
       // Validate dates
       const start = new Date(startDate);
       const end = new Date(endDate);
 
-      if (isNaN(start.getTime()) || isNaN(end.getTime())) {
-        return res.status(400).json({
-          error: {
-            code: "VALIDATION_ERROR",
-            message: "Invalid date format",
-          },
-        });
-      }
-
-      if (start >= end) {
-        return res.status(400).json({
-          error: {
-            code: "VALIDATION_ERROR",
-            message: "End date must be after start date",
-          },
-        });
+      if (!validateDateRange(res, start, end)) {
+        return;
       }
 
       // Validate budget
-      if (budget <= 0) {
-        return res.status(400).json({
-          error: {
-            code: "VALIDATION_ERROR",
-            message: "Budget must be greater than 0",
-          },
-        });
+      if (!validatePositiveNumber(res, parseFloat(budget), "Budget")) {
+        return;
       }
 
       const trip = await tripService.createTrip({
@@ -99,12 +80,12 @@ export class TripController {
 
       // Verify ownership
       if (trip.userId !== userId) {
-        return res.status(403).json({
-          error: {
-            code: "FORBIDDEN",
-            message: "You do not have access to this trip",
-          },
-        });
+        return sendErrorResponse(
+          res,
+          403,
+          "FORBIDDEN",
+          "You do not have access to this trip"
+        );
       }
 
       // Log meal data for debugging
